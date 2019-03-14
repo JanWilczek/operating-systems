@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"memblocks_library.h": "c",
+			"memblocks.h": "c",
+			"stdio.h": "c",
+			"times.h": "c"
+		}
+	}
+}

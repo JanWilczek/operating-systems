@@ -1,0 +1,21 @@
+Small dataset find and allocation - real time: 213
+Small dataset find and allocation - kernel mode time: 0
+Small dataset find and allocation - user mode time: 0
+Small dataset block deletion - real time: 0
+Small dataset block deletion - kernel mode time: 0
+Small dataset block deletion - user mode time: 0
+Middle-sized dataset find and allocation - real time: 7
+Middle-sized dataset find and allocation - kernel mode time: 0
+Middle-sized dataset find and allocation - user mode time: 0
+Middle-sized dataset block deletion - real time: 0
+Middle-sized dataset block deletion - kernel mode time: 0
+Middle-sized dataset block deletion - user mode time: 0
+Big dataset find and allocation - real time: 80
+Big dataset find and allocation - kernel mode time: 0
+Big dataset find and allocation - user mode time: 0
+Big dataset block deletion - real time: 0
+Big dataset block deletion - kernel mode time: 0
+Big dataset block deletion - user mode time: 0
+Allocation with deletion - real time: 838
+Allocation with deletion - kernel mode time: 0
+Allocation with deletion - user mode time: 0

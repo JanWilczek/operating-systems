@@ -7,7 +7,7 @@ all: speed_test_static speed_test_shared
 # STATIC COMPILATION
 
 speed_test_static: speed_test.o $(MEMBLOCKS_LIBRARY_PATH)/libmemblocks.a
-	make libmemblocks.a -C $(MEMBLOCKS_LIBRARY_PATH)
+	make libmemblocks.a CFLAGS=$(CFLAGS) -C $(MEMBLOCKS_LIBRARY_PATH)
 	gcc $(CFLAGS) $(TEMP_FLAGS) -o speed_test_static $(SPEED_TEST_PATH)/speed_test.o \
 		$(SPEED_TEST_PATH)/stop_watch.o $(MEMBLOCKS_LIBRARY_PATH)/libmemblocks.a
 
@@ -24,7 +24,7 @@ speed_test_shared: speed_test.o_shared stop_watch.o_shared libmemblocks.so
 	gcc $(CFLAGS) $(TEMP_FLAGS) -o speed_test_shared stop_watch.o_shared speed_test.o_shared -lmemblocks -L$(MEMBLOCKS_LIBRARY_PATH)
 
 libmemblocks.so:
-	make libmemblocks.so -C $(MEMBLOCKS_LIBRARY_PATH)
+	make libmemblocks.so CFLAGS=$(CFLAGS) -C $(MEMBLOCKS_LIBRARY_PATH)
 
 speed_test.o_shared: $(SPEED_TEST_PATH)/stop_watch.h $(SPEED_TEST_PATH)/speed_test.c
 	gcc $(CFLAGS) $(TEMP_FLAGS) -fPIC -c $(SPEED_TEST_PATH)/speed_test.c \

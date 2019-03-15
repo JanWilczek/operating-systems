@@ -17,10 +17,10 @@ memblocks.o: memblocks.c memblocks.h
 
 shared: memblocks_test_shared
 
-memblocks_test_shared: memblocks.so main.o
+memblocks_test_shared: libmemblocks.so main.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) main.o -lmemblocks -L. -o memblocks_test_shared
 
-memblocks.so: memblocks.o_shared
+libmemblocks.so: memblocks.o_shared
 	gcc $(CFLAGS) $(TEMP_FLAGS) -shared	-fPIC -o libmemblocks.so memblocks.o
 	sudo cp libmemblocks.so /usr/lib
 	sudo chmod 0755 /usr/lib/libmemblocks.so

@@ -25,4 +25,4 @@ main.o: main.c $(MEMBLOCKS_LIBRARY_PATH)/memblocks.h
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c main.c -I $(MEMBLOCKS_LIBRARY_PATH)
 
 clean:
-	rm -f *.a main *.o
+	rm -f *.a main speed_test *.o

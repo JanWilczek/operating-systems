@@ -11,3 +11,4 @@ make speed_test_shared
 ./speed_test_shared $OUTPUT_FILE_NAME "Shared library:"
 
 make speed_test_dynamic
+./speed_test_dynamic $OUTPUT_FILE_NAME "Dynamically loaded library:"

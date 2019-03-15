@@ -93,8 +93,13 @@ void run_find_command(memblocks_table_t* memblocks_ptr, const char* tmp_filename
     // This line can be used for testing - it prints out find's results on the command line.
     // sprintf(command, "find %s -name %s", memblocks_ptr->current_dir, memblocks_ptr->searched_filename);
     
-    system(command);
+    int code = system(command);
     free(command);
+
+    if (code < 0)
+    {
+        error_ocurred(memblocks_ptr, "Error when using system() function.");
+    }
 }
 
 char* read_file(const char* filename)
@@ -108,7 +113,14 @@ char* read_file(const char* filename)
         char* block_for_result = malloc(file_size);
 
         rewind(file);
-        fread(block_for_result, sizeof(char), file_size / sizeof(char), file);
+        size_t nmemb = file_size / sizeof(char);
+        size_t read = fread(block_for_result, sizeof(char), nmemb, file); // TODO: Handle return value.
+
+        if (read != nmemb && ferror(file))
+        {
+            fclose(file);
+            return NULL;
+        }
         fclose(file);
 
         return block_for_result;

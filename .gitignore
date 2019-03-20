@@ -1,0 +1,13 @@
+# C output files
+*.o
+*.so
+*.a
+
+# Text files
+*.txt
+
+# Compressed files
+*.tar.gz
+
+# Folders with my name
+WilczekJan/

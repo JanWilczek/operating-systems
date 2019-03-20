@@ -11,6 +11,8 @@ extern int generate_random_records(const char* filename, int number_of_records_t
  *      functions from the standard C library.
  * */
 extern int sort_records(const char* filename, int number_of_records, int record_size, const char* library_name);
+int copy_records(const char* source_filename, const char* target_filename, int number_of_records, int record_size, const char* library_name);
+
 
 #ifdef __cplusplus
 }

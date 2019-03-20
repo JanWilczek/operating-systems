@@ -2,6 +2,12 @@
 *.o
 *.so
 *.a
+*.o_dynamic
+*.o_shared
+
+# VS Code workspace file and folder
+*.code-workspace
+.vscode/
 
 # Text files
 *.txt

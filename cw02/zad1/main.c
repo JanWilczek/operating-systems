@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <assert.h>
 #include "file_operations.h"
 
 
@@ -58,6 +59,9 @@ int main(int argc, char* argv[])
                 break;
             case 'g':   // Generate file filled with random data
                 filename = optarg;
+
+                assert(optind + 1 < argc && "Not enough input arguments for generate!");
+
                 nb_records = atoi(argv[optind]);    // a hack since getopt_long does not support multiple arguments for an option
                 record_size_in_bytes = atoi(argv[optind + 1]);
                 printf("You want to generate %d records %dB size each.\n", nb_records, record_size_in_bytes);
@@ -66,13 +70,26 @@ int main(int argc, char* argv[])
                 break;
             case 's': // Sort file named filename
                 filename = optarg;
+
+                assert(optind + 2 < argc && "Not enough input arguments for sort!");
+
                 nb_records = atoi(argv[optind]);
                 record_size_in_bytes = atoi(argv[optind + 1]);
                 library_name = argv[optind + 2];
 
                 sort_records(filename, nb_records, record_size_in_bytes, library_name);
                 break;
-            case 'c':
+            case 'c':   // Copy from one file to another
+                source = optarg;
+
+                assert(optind + 3 < argc && "Not enough input arguments for copy!");
+
+                target = argv[optind];
+                nb_records = atoi(argv[optind + 1]);
+                record_size_in_bytes = atoi(argv[optind + 2]);
+                library_name = argv[optind + 3];
+
+                copy_records(source, target, nb_records, record_size_in_bytes, library_name);
                 break;
             case -1: // Finished parsing arguments
                 break;

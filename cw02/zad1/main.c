@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include "file_operations.h"
 
 
 /**
@@ -38,6 +39,13 @@ int main(int argc, char* argv[])
     const char* program_name = argv[0];
     int next_option = 0;
 
+    char* filename;
+    char* source;
+    char* target;
+    char* library_name;
+    int nb_records;
+    int record_size_in_bytes;
+
     // Read out the command line arguments
     while (next_option != -1)
     {
@@ -48,15 +56,32 @@ int main(int argc, char* argv[])
             case 'h': // Print help
                 print_options(stdout, program_name);
                 break;
-            case 'g':
-            case 's':
+            case 'g':   // Generate file filled with random data
+                filename = optarg;
+                nb_records = atoi(argv[optind]);    // a hack since getopt_long does not support multiple arguments for an option
+                record_size_in_bytes = atoi(argv[optind + 1]);
+                printf("You want to generate %d records %dB size each.\n", nb_records, record_size_in_bytes);
+
+                generate_random_records(filename, nb_records, record_size_in_bytes);
+                break;
+            case 's': // Sort file named filename
+                filename = optarg;
+                nb_records = atoi(argv[optind]);
+                record_size_in_bytes = atoi(argv[optind + 1]);
+                library_name = argv[optind + 2];
+
+                sort_records(filename, nb_records, record_size_in_bytes, library_name);
+                break;
             case 'c':
+                break;
             case -1: // Finished parsing arguments
                 break;
+            case '?': // Improper option
             default: // Error, exit program
-                abort();
+                print_options(stderr, program_name);
+                exit(EXIT_FAILURE);
         }
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

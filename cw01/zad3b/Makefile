@@ -2,7 +2,7 @@ TEMP_FLAGS=-g -Wall
 MEMBLOCKS_LIBRARY_PATH=../zad1
 SPEED_TEST_PATH=../zad2
 
-all: speed_test_static speed_test_shared
+all: speed_test_static speed_test_shared speed_test_dynamic
 
 # STATIC COMPILATION
 
@@ -45,4 +45,4 @@ speed_test.o_dynamic: $(SPEED_TEST_PATH)/stop_watch.h $(SPEED_TEST_PATH)/speed_t
 # CLEAN
 
 clean:
-	rm -f *.a speed_test speed_test_static speed_test_shared *.o *.o_shared
+	rm -f *.a speed_test speed_test_static speed_test_shared *.o *.o_shared *.o_dynamic speed_test_dynamic

@@ -88,7 +88,91 @@ void assert_sorted(const char* filename, int number_of_records, int record_size)
 
 int sort_records_system(const char* filename, int number_of_records, int record_size)
 {
-    return 1;
+    printf("Records before sorting:\n");
+    print_file(filename, number_of_records, record_size);
+
+    int file = open(filename, O_RDWR);
+    if (file != -1)
+    {
+
+        unsigned char min_key, data_ptr, cur_key;
+        int min_key_pos;
+        int records_processed = 0;
+
+        while (records_processed < number_of_records - 1)
+        {
+            int new_offset = lseek(file, records_processed * record_size, SEEK_SET);
+
+            if (new_offset < 0)
+            {
+                close(file);
+                perror("Sorting error: ");
+                return 1;
+            }
+
+            size_t read_chars = read(file, &data_ptr, 1);
+
+            if (read_chars != 1u)
+            {
+                fprintf(stderr, "Error while reading file. Probably incorrect arguments passed to sorting function.");
+                close(file);
+                return 1;
+            }
+
+            min_key = data_ptr;
+            min_key_pos = records_processed;
+            int pos = records_processed + 1;
+            
+            // look for a minimal element
+            while (pos < number_of_records)
+            {
+                new_offset = lseek(file, pos * record_size, SEEK_SET);
+                read_chars = read(file, &cur_key, 1u);
+
+                if (cur_key < min_key)
+                {
+                    min_key = cur_key;
+                    min_key_pos = pos;
+                }
+
+                ++pos;
+            }
+
+            // swap record with minimal key with the current record
+            if (min_key_pos != records_processed)
+            {
+                char* min_data = malloc(record_size);
+                char* swap_data = malloc(record_size);
+
+                new_offset = lseek(file, min_key_pos * record_size, SEEK_SET);
+                read_chars = read(file, min_data, record_size);
+                
+                new_offset = lseek(file, records_processed * record_size, SEEK_SET);
+                read(file, swap_data, record_size);
+
+                new_offset = lseek(file, records_processed * record_size, SEEK_SET);
+                write(file, min_data, record_size);
+
+                new_offset = lseek(file, min_key_pos * record_size, SEEK_SET);
+                write(file, swap_data, record_size);
+
+                free(min_data);
+                free(swap_data);
+            }
+
+            ++records_processed;
+        }
+
+        close(file);
+
+        printf("Records after sorting:\n");
+        print_file(filename, number_of_records, record_size);
+        assert_sorted(filename, number_of_records, record_size);
+
+        return 0;
+    }
+
+    return errno;
 }
 
 int sort_records_cstdlib(const char* filename, int number_of_records, int record_size)
@@ -134,7 +218,7 @@ int sort_records_cstdlib(const char* filename, int number_of_records, int record
             while (pos < number_of_records)
             {
                 err = fseek(file, pos * record_size, SEEK_SET);
-                size_t read = fread(&cur_key, 1, 1u, file);
+                read = fread(&cur_key, 1, 1u, file);
                 eof = feof(file);
 
                 if (cur_key < min_key)
@@ -153,7 +237,7 @@ int sort_records_cstdlib(const char* filename, int number_of_records, int record
                 char* swap_data = malloc(record_size);
 
                 err = fseek(file, min_key_pos * record_size, SEEK_SET);
-                size_t read = fread(min_data, record_size, 1u, file);
+                read = fread(min_data, record_size, 1u, file);
                 
                 err = fseek(file, records_processed * record_size, SEEK_SET);
                 fread(swap_data, record_size, 1u, file);

@@ -5,7 +5,16 @@
 
 void print_usage(FILE* stream, const char* program_name)
 {
-
+    fprintf(stream, "Usage: %s { option argument }\n", program_name);
+    fprintf(stream, "   -h  --help          Display this usage information.\n"
+                    "   -p  --path          Specify the path to the file to show information about.\n"
+                    "   -c  --comparison    Specify the comparison operator for date.\n"
+                    "                       \'<\' will list files modified before the specified date,\n"
+                    "                       \'>\' will list files modified after the specified date,\n"
+                    "                       \'=\' will list files modified on the specified date,\n"
+                    "   -d   --date         Date to be compared with the modification date\n"
+                    "                       in DD/MM/YYYY format.\n"
+                    );
 }
 
 int main(int argc, char* argv[])
@@ -35,7 +44,7 @@ int main(int argc, char* argv[])
         {
             case 'h':   // Print help
                 print_usage(stdout, program_name);
-                return 0;
+                return EXIT_SUCCESS;
 
             case 'p':   // Specify the path to the file to analyse
                 path = optarg;
@@ -51,7 +60,7 @@ int main(int argc, char* argv[])
 
             case '?':   // Invalid option
                 print_usage(stderr, program_name);
-                return 0;
+                return EXIT_FAILURE;
 
             case -1:  // Finished parsing options
                 break;
@@ -63,7 +72,8 @@ int main(int argc, char* argv[])
 
     if (!path || !comparison_operator || !date)
     {
-        fprintf(stderr, "Not enough input arguments!");
+        fprintf(stderr, "Not enough input arguments!\n"
+                        "You have to provide arguments for -p, -c, and -d simultaneously.\n");
         print_usage(stderr, program_name);
         return EXIT_FAILURE;
     }

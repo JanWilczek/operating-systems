@@ -17,29 +17,39 @@ void stop(stop_watch_t* sw)
     sw->realtime_stop = times(&sw->stop);
 }
 
-void write_times(stop_watch_t* sw)
+void write_times(stop_watch_t* sw, int flags)
 {
     FILE* file = fopen(sw->filename, "a");
     if (file != NULL)
     {
-        int realtime = get_realtime_in_ms(sw);
-        //clock_t kernel_mode_time = sw->stop->tms_stime - sw->start->tms_stime;
-        int kernel_mode_time = get_kernel_time_in_ms(sw);
-        //clock_t user_mode_time = sw->stop->tms_utime - sw->start->tms_utime;
-        int user_mode_time = get_user_time_in_ms(sw);
+        if (flags & WRITE_REALTIME)
+        {
+            int realtime = get_realtime_in_ms(sw);
+            fprintf(file, "%s - real time: %d ms\n", sw->preamble, realtime);
+        }
 
-        fprintf(file, "%s - real time: %d ms\n", sw->preamble, realtime);
-        fprintf(file, "%s - kernel mode time: %d ms\n", sw->preamble, kernel_mode_time);
-        fprintf(file, "%s - user mode time: %d ms\n", sw->preamble, user_mode_time);
+        if (flags & WRITE_KERNEL_TIME)
+        {
+            int kernel_mode_time = get_kernel_time_in_ms(sw);
+            fprintf(file, "%s - kernel mode time: %d ms\n", sw->preamble, kernel_mode_time);
+        }
+        //clock_t kernel_mode_time = sw->stop->tms_stime - sw->start->tms_stime;
+        //clock_t user_mode_time = sw->stop->tms_utime - sw->start->tms_utime;
+
+        if (flags & WRITE_USER_TIME)
+        {
+            int user_mode_time = get_user_time_in_ms(sw);
+            fprintf(file, "%s - user mode time: %d ms\n", sw->preamble, user_mode_time);
+        }
 
         fclose(file);
     }
 }
 
-void stop_and_write(stop_watch_t* sw)
+void stop_and_write(stop_watch_t* sw, int flags)
 {
     stop(sw);
-    write_times(sw);
+    write_times(sw, flags);
 }
 
 void free_stop_watch(stop_watch_t* sw)

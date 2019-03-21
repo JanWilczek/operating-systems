@@ -21,4 +21,4 @@ main.o: main.c file_operations.h
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c main.c
 
 clean:
-	rm -f *.o program
+	rm -f *.o program speed_test

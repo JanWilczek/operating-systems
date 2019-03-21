@@ -88,8 +88,8 @@ void assert_sorted(const char* filename, int number_of_records, int record_size)
 
 int sort_records_system(const char* filename, int number_of_records, int record_size)
 {
-    printf("Records before sorting:\n");
-    print_file(filename, number_of_records, record_size);
+    //printf("Records before sorting:\n");
+    //print_file(filename, number_of_records, record_size);
 
     int file = open(filename, O_RDWR);
     if (file != -1)
@@ -165,8 +165,8 @@ int sort_records_system(const char* filename, int number_of_records, int record_
 
         close(file);
 
-        printf("Records after sorting:\n");
-        print_file(filename, number_of_records, record_size);
+        //printf("Records after sorting:\n");
+        //print_file(filename, number_of_records, record_size);
         assert_sorted(filename, number_of_records, record_size);
 
         return 0;
@@ -177,8 +177,8 @@ int sort_records_system(const char* filename, int number_of_records, int record_
 
 int sort_records_cstdlib(const char* filename, int number_of_records, int record_size)
 {
-    printf("Records before sorting:\n");
-    print_file(filename, number_of_records, record_size);
+    //printf("Records before sorting:\n");
+    //print_file(filename, number_of_records, record_size);
 
     FILE* file = fopen(filename, "r+");
     if (file != NULL)
@@ -259,8 +259,8 @@ int sort_records_cstdlib(const char* filename, int number_of_records, int record
 
         fclose(file);
 
-        printf("Records after sorting:\n");
-        print_file(filename, number_of_records, record_size);
+        //printf("Records after sorting:\n");
+        //print_file(filename, number_of_records, record_size);
         assert_sorted(filename, number_of_records, record_size);
 
         return 0;

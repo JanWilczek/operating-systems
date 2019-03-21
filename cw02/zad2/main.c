@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <stdio.h>
+#include <assert.h>
+#include <string.h>
 #include "dir_info.h"
 
 void print_usage(FILE* stream, const char* program_name)
@@ -57,10 +59,12 @@ int main(int argc, char* argv[])
 
             case 'c':   // Specify the comparison operator to use
                 comparison_operator = optarg[0];
+                assert((comparison_operator == '<' || comparison_operator == '>' || comparison_operator == '=') && "Invalid comparison operator format");
                 break;
 
             case 'd':   // Specify the date
                 date = optarg;
+                assert(strlen(date) == 10 && date[2] == '/' && date[5] == '/' && "Incorrect date format");
                 break;
 
             case 'n':   // Use the nftw() function

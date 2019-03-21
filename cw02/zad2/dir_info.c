@@ -9,6 +9,8 @@
 #include <ftw.h>
 #include <stdint.h>
 
+#define FILE_TYPE_BUFFER_SIZE 10
+
 //=============================================================================
 // ****************     HELPER FUNCTIONS     **********************************
 //=============================================================================
@@ -115,35 +117,35 @@ void get_file_type(__mode_t mode, char *buffer)
 {
     if (S_ISLNK(mode))
     {
-        strncpy(buffer, "slink", 8);
+        strncpy(buffer, "slink", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISREG(mode))
     {
-        strncpy(buffer, "file", 8);
+        strncpy(buffer, "file", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISDIR(mode))
     {
-        strncpy(buffer, "dir", 8);
+        strncpy(buffer, "dir", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISCHR(mode))
     {
-        strncpy(buffer, "char dev", 8);
+        strncpy(buffer, "char dev", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISBLK(mode))
     {
-        strncpy(buffer, "block dev", 8);
+        strncpy(buffer, "block dev", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISFIFO(mode))
     {
-        strncpy(buffer, "fifo", 8);
+        strncpy(buffer, "fifo", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISSOCK(mode))
     {
-        strncpy(buffer, "sock", 8);
+        strncpy(buffer, "sock", FILE_TYPE_BUFFER_SIZE);
     }
     else
     {
-        strncpy(buffer, "unknown", 8);
+        strncpy(buffer, "unknown", FILE_TYPE_BUFFER_SIZE);
     }
 }
 
@@ -219,38 +221,38 @@ void print_dir_info(const char *path, char comparison_operator, char *date)
 
 void get_file_type_from_flags(int flag, __mode_t mode, char* buffer)
 {
-    if (flag == FTW_SL || flag == FTW_SLN)
-    {
-        strncpy(buffer, "slink", 8);
-    }
-    else if (flag == FTW_F)
-    {
-        strncpy(buffer, "file", 8);
-    }
-    else if (flag == FTW_D || flag == FTW_DP)
-    {
-        strncpy(buffer, "dir", 8);
-    }
     // There are no FTW_ flags to check on the below types of files
-    else if (S_ISCHR(mode))
+    if (S_ISCHR(mode))
     {
-        strncpy(buffer, "char dev", 8);
+        strncpy(buffer, "char dev", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISBLK(mode))
     {
-        strncpy(buffer, "block dev", 8);
+        strncpy(buffer, "block dev", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISFIFO(mode))
     {
-        strncpy(buffer, "fifo", 8);
+        strncpy(buffer, "fifo", FILE_TYPE_BUFFER_SIZE);
     }
     else if (S_ISSOCK(mode))
     {
-        strncpy(buffer, "sock", 8);
+        strncpy(buffer, "sock", FILE_TYPE_BUFFER_SIZE);
+    }
+    else if (flag == FTW_SL || flag == FTW_SLN)
+    {
+        strncpy(buffer, "slink", FILE_TYPE_BUFFER_SIZE);
+    }
+    else if (flag == FTW_F)
+    {
+        strncpy(buffer, "file", FILE_TYPE_BUFFER_SIZE);
+    }
+    else if (flag == FTW_D || flag == FTW_DP)
+    {
+        strncpy(buffer, "dir", FILE_TYPE_BUFFER_SIZE);
     }
     else
     {
-        strncpy(buffer, "unknown", 8);
+        strncpy(buffer, "unknown", FILE_TYPE_BUFFER_SIZE);
     }
 }
 
@@ -272,7 +274,7 @@ int for_each_dir_entry(const char *file_path, const struct stat *current_file_st
         return 0;
     }
 
-    char file_type[8];
+    char file_type[FILE_TYPE_BUFFER_SIZE];
 
     // Get absolute file path, file type and file's size in bytes
     get_file_type_from_flags(typeflag, current_file_status->st_mode, file_type);

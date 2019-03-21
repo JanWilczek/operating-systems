@@ -55,6 +55,7 @@ void append_commentary(const char* filename)
                                 "przenoszalności kodu.";
 
         fwrite(message, sizeof(message) - 1, 1, file);
+        fclose(file);
     }
 }
 

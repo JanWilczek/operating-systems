@@ -167,7 +167,7 @@ int sort_records_system(const char* filename, int number_of_records, int record_
 
         //printf("Records after sorting:\n");
         //print_file(filename, number_of_records, record_size);
-        assert_sorted(filename, number_of_records, record_size);
+        //assert_sorted(filename, number_of_records, record_size);
 
         return 0;
     }
@@ -261,7 +261,7 @@ int sort_records_cstdlib(const char* filename, int number_of_records, int record
 
         //printf("Records after sorting:\n");
         //print_file(filename, number_of_records, record_size);
-        assert_sorted(filename, number_of_records, record_size);
+        //assert_sorted(filename, number_of_records, record_size);
 
         return 0;
     }

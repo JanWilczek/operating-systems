@@ -189,7 +189,7 @@ int sort_records_cstdlib(const char* filename, int number_of_records, int record
         int records_processed = 0;
         int eof = 0;
 
-        while (records_processed < number_of_records - 1)
+        while (records_processed < number_of_records - 1 && !eof)
         {
             int err = fseek(file, records_processed * record_size, SEEK_SET);
 
@@ -215,7 +215,7 @@ int sort_records_cstdlib(const char* filename, int number_of_records, int record
             int pos = records_processed + 1;
             
             // look for a minimal element
-            while (pos < number_of_records)
+            while (pos < number_of_records && !eof)
             {
                 err = fseek(file, pos * record_size, SEEK_SET);
                 read = fread(&cur_key, 1, 1u, file);

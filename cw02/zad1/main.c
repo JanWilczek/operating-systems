@@ -64,7 +64,6 @@ int main(int argc, char* argv[])
 
                 nb_records = atoi(argv[optind]);    // a hack since getopt_long does not support multiple arguments for an option
                 record_size_in_bytes = atoi(argv[optind + 1]);
-                printf("You want to generate %d records %dB size each.\n", nb_records, record_size_in_bytes);
 
                 generate_random_records(filename, nb_records, record_size_in_bytes);
                 break;

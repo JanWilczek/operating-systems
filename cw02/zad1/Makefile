@@ -2,6 +2,9 @@ TEMP_FLAGS=-g -Wall
 
 all: program speed_test
 
+test: program
+	./program --generate data 100 512 --copy data data2 100 512 lib --sort data 100 512 sys --sort data2 100 512 lib
+
 speed_test: file_operations.o speed_test.o stop_watch.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) file_operations.o speed_test.o stop_watch.o -o speed_test
 
@@ -21,4 +24,4 @@ main.o: main.c file_operations.h
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c main.c
 
 clean:
-	rm -f *.o program speed_test
+	rm -f *.o program speed_test data data2

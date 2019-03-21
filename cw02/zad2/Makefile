@@ -2,6 +2,9 @@ TEMP_FLAGS=-g -Wall
 
 all: dirinfo
 
+test: dirinfo
+	./dirinfo -p ./test_dir -c '>' -d '11/03/2019' --nftw
+
 dirinfo: dir_info.o main.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) dir_info.o main.o -o dirinfo
 

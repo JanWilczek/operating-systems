@@ -47,12 +47,12 @@ void append_commentary(const char* filename)
     FILE* file = fopen(filename, "a");
     if (file != NULL)
     {
-        const char message[] = "\n\nMożna zauważyć, że kopiowanie przy użyciu biblioteki standardowej C jest minimalnie\n"
-                                "szybsze od systemowego w prawie każdym przypadku (oprócz 4000 rekordów o rozmiarze\n"
-                                "8192), natomiast sortowanie zawsze jest zdecydowanie szybsze przy użyciu funkcji systemowych.\n"
-                                "Wynika to z faktu, że funkcje biblioteki standardowej są opakowaniami funkcji systemowych, co\n"
-                                "sprawia, że zawsze bezpośrednie użycie funkcji systemowych powinno dać lepsze wyniki, kosztem\n"
-                                "przenoszalności kodu.";
+        const char message[] = "\n\nMozna zauwazyc, ze kopiowanie przy uzyciu biblioteki standardowej C jest minimalnie\n"
+                                "szybsze od systemowego w prawie kazdym przypadku (oprocz 4000 rekordow o rozmiarze\n"
+                                "8192), natomiast sortowanie zawsze jest zdecydowanie szybsze przy uzyciu funkcji systemowych.\n"
+                                "Wynika to z faktu, ze funkcje biblioteki standardowej sa opakowaniami funkcji systemowych, co\n"
+                                "sprawia, ze zawsze bezposrednie uzycie funkcji systemowych powinno dac lepsze wyniki, kosztem\n"
+                                "przenoszalnosci kodu.";
 
         fwrite(message, sizeof(message) - 1, 1, file);
         fclose(file);

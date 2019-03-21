@@ -1,15 +1,15 @@
 TEMP_FLAGS=-g -Wall
 
-all: fileinfo
+all: dirinfo
 
-fileinfo: file_info.o main.o
-	gcc $(CFLAGS) $(TEMP_FLAGS) file_info.o main.o -o fileinfo
+dirinfo: dir_info.o main.o
+	gcc $(CFLAGS) $(TEMP_FLAGS) dir_info.o main.o -o dirinfo
 
-main.o: main.c file_info.h
+main.o: main.c dir_info.h
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c main.c
 
-file_info.o: file_info.h file_info.c
-	gcc $(CFLAGS) $(TEMP_FLAGS) -c file_info.c
+dir_info.o: dir_info.h dir_info.c
+	gcc $(CFLAGS) $(TEMP_FLAGS) -c dir_info.c
 
 clean:
-	rm -f *.o fileinfo
+	rm -f *.o dirinfo

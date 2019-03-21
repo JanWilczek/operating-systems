@@ -1,4 +1,4 @@
-#include "file_info.h"
+#include "dir_info.h"
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -25,8 +25,9 @@ struct tm parse_date(char *date)
         *time_fields[i] = atoi(token);
     }
 
-    parsed_date.tm_mon -= 1;
-    parsed_date.tm_year -= 1900;
+    // tm struct conventions
+    parsed_date.tm_mon -= 1;        // months are numbered 0-11
+    parsed_date.tm_year -= 1900;    // years are represented as years passed since 1900 (for example, 2019 corresponds to 119)
 
     return parsed_date;
 }
@@ -37,7 +38,7 @@ int less(char comparison_operator)
     {
     case '<':
         return 1;
-        
+
     case '>':
     case '=':
     default:
@@ -100,39 +101,39 @@ int compare_dates(struct tm *file_date, struct tm *compare_date, char comparison
     return greater(comparison_operator);
 }
 
-const char *get_file_type(__mode_t mode)
+void get_file_type(__mode_t mode, char* buffer)
 {
-    if (S_ISREG(mode))
+    if (S_ISLNK(mode))
     {
-        return "file";
+        strncpy(buffer, "slink", 8);
+    }
+    else if (S_ISREG(mode))
+    {
+        strncpy(buffer, "file", 8);
     }
     else if (S_ISDIR(mode))
     {
-        return "dir";
+        strncpy(buffer, "dir", 8);
     }
     else if (S_ISCHR(mode))
     {
-        return "char dev";
+        strncpy(buffer, "char dev", 8);
     }
     else if (S_ISBLK(mode))
     {
-        return "block dev";
+        strncpy(buffer, "block dev", 8);
     }
     else if (S_ISFIFO(mode))
     {
-        return "fifo";
-    }
-    else if (S_ISLNK(mode))
-    {
-        return "slink";
+        strncpy(buffer, "fifo", 8);
     }
     else if (S_ISSOCK(mode))
     {
-        return "sock";
+        strncpy(buffer, "sock", 8);
     }
     else
     {
-        return "unknown";
+        strncpy(buffer, "unknown", 8);
     }
 }
 
@@ -160,6 +161,7 @@ void print_file_info(const char *path, char comparison_operator, char *date)
         struct stat current_file_status;
         char *absolute_file_path = malloc(4096 * sizeof(char));
         int path_field_width = strlen(absolute_dir_path) + 30;
+        char* file_type = malloc(8 * sizeof(char));
 
         const char header_format[] = "| %-*s | %-10s | %-14s | %-25s | %-25s |\n";
         const char fields_format[] = "| %-*s | %-10s | %-14ld | %-25s | %-25s |\n";
@@ -167,15 +169,15 @@ void print_file_info(const char *path, char comparison_operator, char *date)
 
         while (current_file != NULL)
         {
-            lstat(current_file->d_name, &current_file_status);
+            snprintf(absolute_file_path, 4096u, "%s/%s", absolute_dir_path, current_file->d_name);
+            lstat(absolute_file_path, &current_file_status);
 
             struct tm *time_info = localtime(&current_file_status.st_mtime);
 
             if (compare_dates(time_info, &compared_date, comparison_operator))
             {
                 // Get absolute file path, file type and file's size in bytes
-                snprintf(absolute_file_path, 4096u, "%s/%s", absolute_dir_path, current_file->d_name);
-                const char *file_type = get_file_type(current_file_status.st_mode);
+                get_file_type(current_file_status.st_mode, file_type);
                 const long size_in_bytes = S_ISREG(current_file_status.st_mode) ? current_file_status.st_size : 0L;
 
                 // Get access and modification dates removing the newline at the end of the string (that what's strtok() for)
@@ -189,6 +191,7 @@ void print_file_info(const char *path, char comparison_operator, char *date)
             current_file = readdir(dirinfo);
         }
 
+        free(file_type);
         free(absolute_file_path);
         closedir(dirinfo);
     }
@@ -199,3 +202,5 @@ void print_file_info(const char *path, char comparison_operator, char *date)
 
     free(absolute_dir_path);
 }
+
+

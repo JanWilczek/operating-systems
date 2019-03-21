@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <stdio.h>
-#include "file_info.h"
+#include "dir_info.h"
 
 void print_usage(FILE* stream, const char* program_name)
 {

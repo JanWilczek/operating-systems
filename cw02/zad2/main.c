@@ -11,7 +11,8 @@ void print_usage(FILE* stream, const char* program_name)
                     "   -c  --comparison    Specify the comparison operator for date.\n"
                     "                       \'<\' will list files modified before the specified date,\n"
                     "                       \'>\' will list files modified after the specified date,\n"
-                    "                       \'=\' will list files modified on the specified date,\n"
+                    "                       \'=\' will list files modified on the specified date.\n"
+                    "                       Mind you, the operator has to be surrounded with single or double quotes.\n"
                     "   -d   --date         Date to be compared with the modification date\n"
                     "                       in DD/MM/YYYY format.\n"
                     );
@@ -33,8 +34,8 @@ int main(int argc, char* argv[])
     int next_option = 0;
 
     const char* path = NULL;
-    const char* comparison_operator = NULL;
-    const char* date = NULL;
+    char comparison_operator = 0;
+    char* date = NULL;
 
     while (next_option != -1)
     {
@@ -51,7 +52,7 @@ int main(int argc, char* argv[])
                 break;
 
             case 'c':   // Specify the comparison operator to use
-                comparison_operator = optarg;
+                comparison_operator = optarg[0];
                 break;
 
             case 'd':   // Specify the date

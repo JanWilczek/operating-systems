@@ -4,7 +4,7 @@
     extern "C" {
 #endif
 
-extern void print_file_info(const char* path, const char* comparison_operator, const char* date);
+extern void print_file_info(const char* path, char comparison_operator, char* date);
 
 #ifdef __cplusplus
     }

@@ -231,6 +231,7 @@ void get_file_type_from_flags(int flag, __mode_t mode, char* buffer)
     {
         strncpy(buffer, "dir", 8);
     }
+    // There are no FTW_ flags to check on the below types of files
     else if (S_ISCHR(mode))
     {
         strncpy(buffer, "char dev", 8);
@@ -304,7 +305,7 @@ void print_dir_info_nftw(const char *path, char comparison_operator, char *date)
     const char header_format[] = "| %-*s | %-10s | %-14s | %-25s | %-25s |\n";
     printf(header_format, nftw_path_field_width, "ABSOLUTE PATH", "FILE TYPE", "SIZE IN BYTES", "LAST ACCESS DATE", "LAST MODIFICATION DATE");
 
-    nftw(absolute_dir_path, &for_each_dir_entry, 10, FTW_PHYS);
+    nftw(absolute_dir_path, &for_each_dir_entry, 10, FTW_PHYS); // FTW_PHYS is enabled to disable symbolic link following
 
     free(buffer);
 }

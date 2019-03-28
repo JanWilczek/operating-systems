@@ -6,7 +6,7 @@ test: monitor
 	./monitor -f list -m 60 -c 1
 
 tester_test: tester
-	./tester -f testfile -i 1 -x 20 -b 40
+	./tester -f testfile -i 1 -x 10 -b 40
 
 tester: tester.o random_append.o
 	gcc $(CFAGS) $(TEMP_FLAGS) random_append.o tester.o -o tester

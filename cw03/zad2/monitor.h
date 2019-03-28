@@ -18,3 +18,4 @@ void monitor_set_monitor_time(monitor_t* monitor, int seconds);
 void monitor_set_copy_mode(monitor_t* monitor, enum monitor_mode mode);
 void monitor_start(monitor_t* monitor);
 void monitor_free(monitor_t* monitor);
+

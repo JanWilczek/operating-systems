@@ -2,11 +2,27 @@
 #include <getopt.h>
 #include <stdio.h>
 #include "monitor.h"
+#include <stdio.h>
+
+void print_usage(FILE* stream, const char* program_name)
+{
+    fprintf(stream, "Usage: %s { option argument }\n", program_name);
+    fprintf(stream, "   -h  --help          Display this usage information.\n"
+                    "   -f  --file          Path to the file with the lists of files to monitor\n"
+                    "                       in format: \"filename seconds_count\" in each line\n"
+                    "                       where filename is the path to the file to monitor and\n"
+                    "                       seconds_count is the update interval of the monitoring.\n"
+                    "   -m  --monitor-time  Number of seconds to monitor the files for.\n"
+                    "   -c   --copy-mode    0 for storing the file in memory and writing backups from it,\n"
+                    "                       1 for using cp on any change.\n"
+                    );
+}
 
 int main(int argc, char* argv[])
 {
-    const char* const short_opts = "f:m:c:";
+    const char* const short_opts = "hf:m:c:";
     const struct option long_opts[] = {
+        { "help",           0, NULL, 'h'},
         { "file",           1, NULL, 'f'},
         { "monitor-time",   1, NULL, 'm'},
         { "copy-mode",      1, NULL, 'c'},
@@ -23,6 +39,9 @@ int main(int argc, char* argv[])
         next_opt = getopt_long(argc, argv, short_opts, long_opts, NULL);
 
         switch (next_opt) {
+            case 'h':
+                print_usage(stdout, argv[0]);
+                return 0;
             case 'f':
                 files_to_monitor = optarg;
                 break;
@@ -32,10 +51,11 @@ int main(int argc, char* argv[])
             case 'c':
                 copy_mode = atoi(optarg);
                 break;
-            case '?':
-                break;
             case -1:
                 break;
+            case '?':
+                print_usage(stderr, argv[0]);
+                return 1;
             default:
                 abort();
         }

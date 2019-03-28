@@ -1,6 +1,8 @@
 #include "monitor.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 int MAX_LINE_SIZE = 256;
 
@@ -79,8 +81,40 @@ void monitor_set_copy_mode(monitor_t *monitor, enum monitor_mode mode)
     monitor->mode = mode;
 }
 
+void monitor_file(const char* filename, int interval_seconds, int termination_time)
+{
+    // Each process should terminate after monitor->monitor_time_seconds seconds and return the number of copies created.
+    exit(0);
+}
+
 void monitor_start(monitor_t *monitor)
 {
+    monitor->pids = malloc(monitor->file_count * sizeof(pid_t));
+
+    // For each file create a child process and make each one monitor one file every given number of seconds.
+    for (int i = 0; i < monitor->file_count; ++i)
+    {
+        pid_t pid = fork();
+
+        if (pid == 0)
+        {
+            // Child process
+            monitor_file(monitor->files_to_monitor[i], monitor->monitor_interval[i], monitor->monitor_time_seconds);
+        }
+        else
+        {
+            // Parent process
+            monitor->pids[i] = pid;
+        }
+    }
+
+    // Retrieve child process status and write out "Process PID created n copies of the monitored file."
+    int return_code;
+    for (int i = 0; i < monitor->file_count; ++i)
+    {
+        pid_t finished = waitpid(monitor->pids[i], &return_code, 0);
+        printf("Process %d created %d copies of the monitored file.\n", finished, return_code);
+    }
 }
 
 void monitor_free(monitor_t *monitor)
@@ -91,5 +125,6 @@ void monitor_free(monitor_t *monitor)
     }
     free(monitor->files_to_monitor);
     free(monitor->monitor_interval);
+    free(monitor->pids);
     free(monitor);
 }

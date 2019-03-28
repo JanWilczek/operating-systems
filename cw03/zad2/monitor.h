@@ -1,4 +1,5 @@
 #pragma once
+#include <sys/types.h>
 
 enum monitor_mode { CONSTANT_STORE, COPY_ON_BACKUP };
 
@@ -7,6 +8,7 @@ typedef struct monitor {
     int monitor_time_seconds;
     char** files_to_monitor;
     int* monitor_interval;
+    pid_t* pids;
     int file_count;
 } monitor_t;
 

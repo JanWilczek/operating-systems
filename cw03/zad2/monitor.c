@@ -176,6 +176,15 @@ char* get_new_filename(const char* original_filename)
     return new_filename;
 }
 
+char* format_file_path(const char* filename, const char* dirname)
+{
+    const int new_file_path_length = strlen(filename) + strlen(dirname) + 10;
+    char* new_file_path = malloc(new_file_path_length);
+    snprintf(new_file_path, new_file_path_length, "./%s/%s", dirname, filename);
+
+    return new_file_path;
+}
+
 void write_backup(const char *original_filename, char *contents_to_store, int file_size_in_bytes)
 {
     //  Write contents to a file in the "archives" folder under an updated name.
@@ -187,9 +196,10 @@ void write_backup(const char *original_filename, char *contents_to_store, int fi
     mkdir(dirname, S_IRWXU | S_IRWXG);  // if the directory exists, nothing will be done
 
     // create and write to the file
-    const int new_file_path_length = strlen(new_filename) + strlen(dirname) + 10;
-    char* new_file_path = malloc(new_file_path_length);
-    snprintf(new_file_path, new_file_path_length, "./%s/%s", dirname, new_filename);
+    // const int new_file_path_length = strlen(new_filename) + strlen(dirname) + 10;
+    // char* new_file_path = malloc(new_file_path_length);
+    // snprintf(new_file_path, new_file_path_length, "./%s/%s", dirname, new_filename);
+    char* new_file_path = format_file_path(new_filename, dirname);
     
     FILE* file = fopen(new_file_path, "w");
     if (file != NULL)
@@ -219,14 +229,14 @@ void constant_store_monitor(const char *filename, int interval_seconds, int term
         // Sleep for a given interval
         sleep(interval_seconds);
 
-        // If the modification date changed then save the file stored in memory in "archive" directory
-        // and store the current file contents in memory.
         time_t last_modified = get_modification_time(filename);
         if (last_modified == 1)
         {
             fprintf(stderr, "Error while fetching modification time");
         }
 
+        // If the modification date changed then save the file stored in memory in "archive" directory
+        // and store the current file contents in memory.
         if (last_modified > modification_time)
         {
             modification_time = last_modified;
@@ -248,8 +258,65 @@ void constant_store_monitor(const char *filename, int interval_seconds, int term
     exit(copies_count);
 }
 
+void cp_backup(const char* filename)
+{
+    pid_t pid = vfork();
+
+    if (pid == 0)
+    {
+        // TODO: These two lines is duplicate code-compare with write_backup
+        // if directory "archive" does not exist, create it
+        const char* dirname = "archive";
+        mkdir(dirname, S_IRWXU | S_IRWXG);  // if the directory exists, nothing will be done
+
+        // Child process
+        char* new_filename = get_new_filename(filename);
+        char* new_file_path = format_file_path(new_filename, dirname);
+
+        free(new_filename);
+
+        execlp("cp", "cp", filename, new_file_path, NULL);
+
+        fprintf(stderr, "This shouldn't be reached.\n");
+        free(new_file_path);
+    }
+}
+
 void copy_on_backup_monitor(const char *filename, int interval_seconds, int termination_time)
 {
+    cp_backup(filename);
+
+    time_t modification_time = get_modification_time(filename);
+    clock_t start_time = times(NULL);
+    clock_t current_time = start_time;
+    int copies_count = 0;
+
+    while (clock_ticks_to_s(current_time - start_time) < termination_time)
+    {
+        // Sleep for a given interval
+        sleep(interval_seconds);
+
+        time_t last_modified = get_modification_time(filename);
+        if (last_modified == 1)
+        {
+            fprintf(stderr, "Error while fetching modification time");
+        }
+
+        // If the modification date changed then copy the file using cp
+        if (last_modified > modification_time)
+        {
+            modification_time = last_modified;
+
+            // Write the backup file
+            cp_backup(filename);
+
+            ++copies_count;
+        }
+        
+        current_time = times(NULL);
+    }
+
+    exit(copies_count);
 }
 
 int file_exists(const char* path)
@@ -318,7 +385,8 @@ void monitor_start(monitor_t *monitor)
         pid_t finished = waitpid(monitor->pids[i], &return_code, 0);
         if (WIFEXITED(return_code))
         {
-            printf("Process %d created %d copies of the monitored file.\n", finished, WEXITSTATUS(return_code));
+            printf("Process %d created %d copies of the monitored file %s.\n", 
+                    finished, WEXITSTATUS(return_code), monitor->files_to_monitor[i]);
         }
     }
 }

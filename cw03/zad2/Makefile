@@ -27,4 +27,4 @@ monitor.o: monitor.c monitor.h
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c monitor.c
 
 clean:
-	rm -random_append *.o monitor archive/
+	rm -R *.o monitor tester archive/

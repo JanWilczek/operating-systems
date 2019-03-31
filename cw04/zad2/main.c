@@ -12,23 +12,20 @@ void print_usage(FILE* stream, const char* program_name)
                     "                       in format: \"filename seconds_count\" in each line\n"
                     "                       where filename is the path to the file to monitor and\n"
                     "                       seconds_count is the update interval of the monitoring.\n"
-                    "   -m  --monitor-time  Number of seconds to monitor the files for.\n"
                     );
 }
 
 int main(int argc, char* argv[])
 {
-    const char* const short_opts = "hf:m:";
+    const char* const short_opts = "hf:";
     const struct option long_opts[] = {
         { "help",           0, NULL, 'h'},
         { "file",           1, NULL, 'f'},
-        { "monitor-time",   1, NULL, 'm'},
         { NULL,             0, NULL, 0  }
     };
 
     int next_opt = 0;
     char* files_to_monitor = NULL;
-    int monitor_time_seconds = 0;
 
     while (next_opt != -1)
     {
@@ -41,9 +38,6 @@ int main(int argc, char* argv[])
             case 'f':
                 files_to_monitor = optarg;
                 break;
-            case 'm':
-                monitor_time_seconds = atoi(optarg);
-                break;
             case -1:
                 break;
             case '?':
@@ -54,14 +48,13 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (files_to_monitor == NULL || monitor_time_seconds <= 0)
+    if (files_to_monitor == NULL)
     {
         fprintf(stderr, "Not all arguments passed.\n");
         return 1;
     }
 
     monitor_t* monitor = monitor_create();
-    monitor_set_monitor_time(monitor, monitor_time_seconds);
     monitor_parse_files(monitor, files_to_monitor);
 
     monitor_start(monitor);

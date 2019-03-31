@@ -3,8 +3,8 @@ TEMP_FLAGS=-g -Wall
 all: monitor tester
 
 test: monitor
-	./monitor -f list -m 60
-
+	./monitor -f list
+	
 tester_test: tester
 	./tester -f testfile -i 1 -x 10 -b 40
 

@@ -74,11 +74,6 @@ int monitor_parse_files(monitor_t *monitor, const char *filename)
     return 1;
 }
 
-void monitor_set_monitor_time(monitor_t *monitor, int seconds)
-{
-    monitor->monitor_time_seconds = seconds;
-}
-
 time_t get_modification_time(const char *filename)
 {
     struct stat file_status;
@@ -209,7 +204,7 @@ void write_backup(const char *original_filename, char *contents_to_store, int fi
 
 int should_monitor = 1;
 
-void constant_store_monitor(const char *filename, int interval_seconds, int termination_time)
+void constant_store_monitor(const char *filename, int interval_seconds)
 {
     time_t modification_time = get_modification_time(filename);
     int file_size_bytes;
@@ -221,7 +216,7 @@ void constant_store_monitor(const char *filename, int interval_seconds, int term
         // Sleep for a given interval
         sleep(interval_seconds);
 
-        if (should_monitor)    // Check flag for this process
+        if (should_monitor) // Check flag for this process
         {
             time_t last_modified = get_modification_time(filename);
             if (last_modified == 1)
@@ -264,7 +259,7 @@ int file_exists(const char *path)
     return 0;
 }
 
-void monitor_file(const char *filename, int interval_seconds, int termination_time)
+void monitor_file(const char *filename, int interval_seconds)
 {
     // Check that the file exists
     if (!file_exists(filename))
@@ -273,30 +268,32 @@ void monitor_file(const char *filename, int interval_seconds, int termination_ti
     }
 
     // Each process should terminate after monitor->monitor_time_seconds seconds and return the number of copies created.
-    constant_store_monitor(filename, interval_seconds, termination_time);
+    constant_store_monitor(filename, interval_seconds);
 }
 
 // ******* SIGNAL HANDLING FUNCTIONS ******************************
 
 void handle_stop(int signum)
 {
+    printf("%d: Stopping monitoring.\n", getpid());
     should_monitor = 0;
 }
 
 void handle_start(int signum)
 {
+    printf("%d: Starting monitoring.\n", getpid());
     should_monitor = 1;
 }
 
 // ******* END OF SIGNAL HANDLING FUNCTIONS ***********************
 
 // ********* COMMAND HANDLING FUNCTIONS ***************************
-void list_processes_files(monitor_t* monitor)
+void list_processes_files(monitor_t *monitor)
 {
     printf("PID       FILE\n");
 
     const char format[] = "%-10d%-30s\n";
-    
+
     for (int i = 0; i < monitor->file_count; ++i)
     {
         printf(format, monitor->pids[i], monitor->files_to_monitor[i]);
@@ -308,7 +305,7 @@ void stop_pid(pid_t pid)
     kill(pid, SIGUSR1);
 }
 
-void stop_all(monitor_t* monitor)
+void stop_all(monitor_t *monitor)
 {
     for (int i = 0; i < monitor->file_count; ++i)
     {
@@ -321,7 +318,7 @@ void start_pid(pid_t pid)
     kill(pid, SIGUSR2);
 }
 
-void start_all(monitor_t* monitor)
+void start_all(monitor_t *monitor)
 {
     for (int i = 0; i < monitor->file_count; ++i)
     {
@@ -329,7 +326,7 @@ void start_all(monitor_t* monitor)
     }
 }
 
-void end_all(monitor_t* monitor)
+void end_all(monitor_t *monitor)
 {
     // TODO: Collect info on copies created.
     for (int i = 0; i < monitor->file_count; ++i)
@@ -339,21 +336,28 @@ void end_all(monitor_t* monitor)
 
     // print report
     // Retrieve child process status and write out "Process PID created n copies of the monitored file."
-    int return_code;
-    for (int i = 0; i < monitor->file_count; ++i)
-    {
-        pid_t finished = waitpid(monitor->pids[i], &return_code, 0);
-        if (WIFEXITED(return_code))
-        {
-            printf("Process %d created %d copies of the monitored file %s.\n",
-                   finished, WEXITSTATUS(return_code), monitor->files_to_monitor[i]);
-        }
-    }
+    // int return_code;
+    // for (int i = 0; i < monitor->file_count; ++i)
+    // {
+    //     pid_t finished = waitpid(monitor->pids[i], &return_code, 0);
+    //     if (WIFEXITED(return_code))
+    //     {
+    //         printf("Process %d created %d copies of the monitored file %s.\n",
+    //                finished, WEXITSTATUS(return_code), monitor->files_to_monitor[i]);
+    //     }
+    // }
 
     exit(0);
 }
 
 // ********* END OF COMMAND HANDLING FUNCTIONS ***************************
+
+int should_end = 0;
+
+void handle_sigint_main(int signum)
+{
+    should_end = 1;
+}
 
 void monitor_start(monitor_t *monitor)
 {
@@ -367,11 +371,11 @@ void monitor_start(monitor_t *monitor)
         if (pid == 0)
         {
             // Child process
-// ************** SIGNAL HANDLING CODE **********************************************************************
+            // ************** SIGNAL HANDLING CODE **********************************************************************
             signal(SIGUSR1, &handle_stop);
             signal(SIGUSR2, &handle_start);
-// ************** END OF SIGNAL HANDLING CODE ***************************************************************
-            monitor_file(monitor->files_to_monitor[i], monitor->monitor_interval[i], monitor->monitor_time_seconds);
+            // ************** END OF SIGNAL HANDLING CODE ***************************************************************
+            monitor_file(monitor->files_to_monitor[i], monitor->monitor_interval[i]);
         }
         else
         {
@@ -385,29 +389,82 @@ void monitor_start(monitor_t *monitor)
     list_processes_files(monitor);
 
     // 2. Change SIGINT handling
-    // TODO: How to pass monitor to signal handling function?
-    //signal(SIGINT, &end_all); 
+    signal(SIGINT, &handle_sigint_main);
 
-    // 2. Retrieve commands
+    // 3. Retrieve commands
     char command[30];
     pid_t pid;
 
     while (1)
     {
+        if (should_end)
+        {
+            printf("Ending program.\n");
+            end_all(monitor);
+        }
+
         scanf("%s", command);
 
         if (strcmp(command, "LIST") == 0)
-        {   
+        {
             list_processes_files(monitor);
         }
         else if (strcmp(command, "END") == 0)
         {
             end_all(monitor);
         }
+        else if (strcmp(command, "STOP") == 0)
+        {
+            scanf("%s", command);
+
+            if (strcmp(command, "ALL") == 0)
+            {
+                stop_all(monitor);
+            }
+            else
+            {
+                int scanned_count = sscanf(command, "%d", &pid); // read from the previously read second word of the command NOT the standard input
+
+                if (scanned_count == 1) // scanned exactly one number - PID
+                {
+                    stop_pid(pid);
+                }
+                else
+                {
+                    fprintf(stderr, "Unrecognized command.\n");
+                }
+                
+            }
+        }
+        else if (strcmp(command, "START") == 0)
+        {
+            scanf("%s", command);
+
+            if (strcmp(command, "ALL") == 0)
+            {
+                start_all(monitor);
+            }
+            else
+            {
+                int scanned_count = sscanf(command, "%d", &pid); // read from the previously read second word of the command NOT the standard input
+
+                if (scanned_count == 1) // scanned exactly one number - PID
+                {
+                    start_pid(pid);
+                }
+                else
+                {
+                    fprintf(stderr, "Unrecognized command.\n");
+                }
+            }
+        }
+        else
+        {
+            fprintf(stderr, "Unrecognized command.\n");
+        }
 
         sleep(1);
     }
-
 
     //**************** END OF COMMAND HANDLING ********************************************************
 }

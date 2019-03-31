@@ -16,3 +16,6 @@ date_printer: date_printer.o
 
 date_printer.o: date_printer.c
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c date_printer.c
+
+clean:
+	rm date_printer date_printer_with_child_process *.o

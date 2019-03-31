@@ -6,7 +6,7 @@
 
 int should_proceed = 1;
 
-void handle_sigstop(int signum)
+void handle_sigtstp(int signum)
 {
     should_proceed = !should_proceed;
     if (!should_proceed)
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     time_t current_time;
     
     // Handle SIGTSTP signal
-    signal(SIGTSTP, &handle_sigstop);
+    signal(SIGTSTP, &handle_sigtstp);
 
     // Handle SIGINT signal
     //struct sigaction sigint_handler = { .sa_handler=&handle_sigint, .sa_mask=0, .sa_flags=0 };

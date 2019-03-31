@@ -203,13 +203,13 @@ void write_backup(const char *original_filename, char *contents_to_store, int fi
 }
 
 int should_monitor = 1;
+int copies_count = 0;
 
 void constant_store_monitor(const char *filename, int interval_seconds)
 {
     time_t modification_time = get_modification_time(filename);
     int file_size_bytes;
     char *file_contents = get_file_contents(filename, &file_size_bytes);
-    int copies_count = 0;
 
     while (1)
     {
@@ -275,14 +275,20 @@ void monitor_file(const char *filename, int interval_seconds)
 
 void handle_stop(int signum)
 {
-    printf("%d: Stopping monitoring.\n", getpid());
+    printf("%d: Stopped monitoring.\n", getpid());
     should_monitor = 0;
 }
 
 void handle_start(int signum)
 {
-    printf("%d: Starting monitoring.\n", getpid());
+    printf("%d: Started monitoring.\n", getpid());
     should_monitor = 1;
+}
+
+void handle_end(int signum)
+{
+    printf("%d: Ended monitoring.\n", getpid());
+    exit(copies_count);
 }
 
 // ******* END OF SIGNAL HANDLING FUNCTIONS ***********************
@@ -328,7 +334,7 @@ void start_all(monitor_t *monitor)
 
 void end_all(monitor_t *monitor)
 {
-    // TODO: Collect info on copies created.
+    // Terminate child processes.
     for (int i = 0; i < monitor->file_count; ++i)
     {
         kill(monitor->pids[i], SIGTERM);
@@ -336,16 +342,16 @@ void end_all(monitor_t *monitor)
 
     // print report
     // Retrieve child process status and write out "Process PID created n copies of the monitored file."
-    // int return_code;
-    // for (int i = 0; i < monitor->file_count; ++i)
-    // {
-    //     pid_t finished = waitpid(monitor->pids[i], &return_code, 0);
-    //     if (WIFEXITED(return_code))
-    //     {
-    //         printf("Process %d created %d copies of the monitored file %s.\n",
-    //                finished, WEXITSTATUS(return_code), monitor->files_to_monitor[i]);
-    //     }
-    // }
+    int return_code;
+    for (int i = 0; i < monitor->file_count; ++i)
+    {
+        pid_t finished = waitpid(monitor->pids[i], &return_code, 0);
+        if (WIFEXITED(return_code) || WIFSIGNALED(return_code))
+        {
+            printf("Process %d created %d copies of the monitored file %s.\n",
+                   finished, WEXITSTATUS(return_code), monitor->files_to_monitor[i]);
+        }
+    }
 
     exit(0);
 }
@@ -356,6 +362,7 @@ int should_end = 0;
 
 void handle_sigint_main(int signum)
 {
+    printf("\nMain process: received SIGINT, write something and press enter to end program.\n");
     should_end = 1;
 }
 
@@ -374,6 +381,7 @@ void monitor_start(monitor_t *monitor)
             // ************** SIGNAL HANDLING CODE **********************************************************************
             signal(SIGUSR1, &handle_stop);
             signal(SIGUSR2, &handle_start);
+            signal(SIGTERM, &handle_end);
             // ************** END OF SIGNAL HANDLING CODE ***************************************************************
             monitor_file(monitor->files_to_monitor[i], monitor->monitor_interval[i]);
         }
@@ -399,7 +407,6 @@ void monitor_start(monitor_t *monitor)
     {
         if (should_end)
         {
-            printf("Ending program.\n");
             end_all(monitor);
         }
 

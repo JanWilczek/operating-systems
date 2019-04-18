@@ -72,7 +72,10 @@ void parse_and_interpret_commands(const char* commands_filename)
                     dup2(fd_out[1], STDOUT_FILENO);
 
                     execv(command_token, arguments);
-                    exit(0);
+
+                    _exit(EXIT_SUCCESS);    // Here having normal exit results in peculiar behaviour
+
+                    printf("This shouldn't be reached.\n");
                 }
                 else
                 {

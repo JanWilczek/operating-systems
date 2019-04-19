@@ -83,13 +83,14 @@ void parse_and_interpret_commands(const char* commands_filename)
                                 perror("dup2 error to stdin");
                                 _exit(EXIT_FAILURE);
                             }
+                            close(fd_in[0]);
                         }
                     }
 
                     close(fd_out[0]);   // close unused read end
                     if (fd_out[1] != STDOUT_FILENO) // take extra precautions that the duplicated descriptor is actually different from the target
                     {
-                        if (dup2(STDOUT_FILENO, fd_out[1]) != fd_out[1])  // redirect standard output to write end of the pipe
+                        if (dup2(fd_out[1], STDOUT_FILENO) != STDOUT_FILENO)  // redirect standard output to write end of the pipe
                         {
                             free(line);
                             free(pids);
@@ -97,9 +98,17 @@ void parse_and_interpret_commands(const char* commands_filename)
                             perror("[child] dup2 error to stdout");
                             _exit(EXIT_FAILURE);
                         }
+                        close(fd_out[1]);
                     }
 
-                    execv(command_token, arguments);
+                    printf("Executing %s", program_name);
+                    for (int k = 0; k < nb_arguments; ++k)
+                    {
+                        printf(" %s", arguments[k]);
+                    }
+                    printf("\n");
+                    execvp(command_token, arguments);   // exec functions return only on error
+                    perror("execvp");
 
                     _exit(EXIT_SUCCESS);    // Here having normal exit results in peculiar behaviour
 
@@ -107,8 +116,9 @@ void parse_and_interpret_commands(const char* commands_filename)
                 }
                 else
                 {
-                    close(fd_out[0]);
-                    close(fd_out[1]);
+                    // close - parent shouldn't use the inter-child pipe
+                    //close(fd_out[0]);
+                    //close(fd_out[1]);
 
                     pids[nb_pids++] = pid;
                     if (nb_pids >= pids_size)
@@ -117,25 +127,26 @@ void parse_and_interpret_commands(const char* commands_filename)
                         pids_size *= 2;
                         pids = realloc(pids, pids_size);
                     }
+
+                    // swap the pipe descriptors-shift the pipes
+                    fd_in[0] = fd_out[0];
+                    fd_in[1] = fd_out[1];
+
+                    free(arguments);
                 }
-
-                // swap the pipe descriptors-shift the pipes
-                fd_in[0] = fd_out[0];
-                fd_in[1] = fd_out[1];
-
-                free(arguments);
             }
 
             // redirect last process's output to standard output
             if (fd_in[0] != STDOUT_FILENO)
             {
-                if (dup2(STDOUT_FILENO, fd_in[0]) != fd_in[0])
+                if (dup2(fd_in[0], STDOUT_FILENO) != STDOUT_FILENO)
                 {
                     free(pids);
                     free(line);
                     perror("[parent] dup2 error to stdout");
                     _exit(EXIT_FAILURE);
                 }
+                close(fd_in[0]);
             }
             close(fd_in[1]);    // unused
 

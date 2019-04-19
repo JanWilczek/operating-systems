@@ -46,7 +46,7 @@ void write_to_fifo(const char* fifo_path, int messages_count)
             char date[100];
             get_date(date, 100);
 
-            snprintf(buff, 500, "PID %d Date: %s", pid, date);  // date should contain newline character
+            snprintf(buff, 500, "PID %d Date: %s", pid, date);  // date should already contain newline character
             write(fifo, buff, strlen(buff));
 
             int seconds_to_sleep = (int) (rand() / ((float) RAND_MAX) * 3 + 2);

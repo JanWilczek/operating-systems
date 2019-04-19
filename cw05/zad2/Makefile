@@ -2,6 +2,13 @@ TEMP_FLAGS=-g -Wall
 
 all: master slave
 
+# Starts master and 3 slave processes, all in background
+test: master slave
+	./master fifo_queue &
+	./slave fifo_queue 5 &
+	./slave fifo_queue 3 &
+	./slave fifo_queue 7 &
+
 master: master.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) master.o -o master
 

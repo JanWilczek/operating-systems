@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+
 void print_usage(FILE *stream, char *program_name)
 {
     fprintf(stream, "Usage: %s  fifo_path\n", program_name);

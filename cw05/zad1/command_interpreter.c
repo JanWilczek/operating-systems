@@ -56,7 +56,14 @@ void parse_and_interpret_commands(const char* commands_filename)
                 arguments[nb_arguments] = NULL;
 
                 // initialize the new pipe
-                pipe(fd_out);
+                if (pipe(fd_out) == -1)
+                {
+                    free(line);
+                    free(pids);
+                    free(arguments);
+                    perror("pipe");
+                    exit(EXIT_FAILURE);
+                }
 
                 // create new process
                 pid_t pid = fork();
@@ -65,11 +72,32 @@ void parse_and_interpret_commands(const char* commands_filename)
                     // redirect standard output of the previous process to this process's standard input
                     if (nb_pids > 0)    // does not concern the first process
                     {
-                        close(fd_in[1]);
-                        dup2(fd_in[0], STDIN_FILENO);
+                        close(fd_in[1]);    // close the write end
+                        if (fd_in[0] != STDIN_FILENO)
+                        {
+                            if (dup2(fd_in[0], STDIN_FILENO) != STDIN_FILENO)
+                            {
+                                free(line);
+                                free(pids);
+                                free(arguments);
+                                perror("dup2 error to stdin");
+                                _exit(EXIT_FAILURE);
+                            }
+                        }
                     }
-                    close(fd_out[0]);
-                    dup2(fd_out[1], STDOUT_FILENO);
+
+                    close(fd_out[0]);   // close unused read end
+                    if (fd_out[1] != STDOUT_FILENO) // take extra precautions that the duplicated descriptor is actually different from the target
+                    {
+                        if (dup2(STDOUT_FILENO, fd_out[1]) != fd_out[1])  // redirect standard output to write end of the pipe
+                        {
+                            free(line);
+                            free(pids);
+                            free(arguments);
+                            perror("[child] dup2 error to stdout");
+                            _exit(EXIT_FAILURE);
+                        }
+                    }
 
                     execv(command_token, arguments);
 
@@ -79,6 +107,9 @@ void parse_and_interpret_commands(const char* commands_filename)
                 }
                 else
                 {
+                    close(fd_out[0]);
+                    close(fd_out[1]);
+
                     pids[nb_pids++] = pid;
                     if (nb_pids >= pids_size)
                     {
@@ -96,7 +127,16 @@ void parse_and_interpret_commands(const char* commands_filename)
             }
 
             // redirect last process's output to standard output
-            dup2(STDOUT_FILENO, fd_in[0]);
+            if (fd_in[0] != STDOUT_FILENO)
+            {
+                if (dup2(STDOUT_FILENO, fd_in[0]) != fd_in[0])
+                {
+                    free(pids);
+                    free(line);
+                    perror("[parent] dup2 error to stdout");
+                    _exit(EXIT_FAILURE);
+                }
+            }
             close(fd_in[1]);    // unused
 
             // wait for all the processes to end

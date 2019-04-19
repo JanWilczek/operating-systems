@@ -12,6 +12,25 @@ void print_usage(FILE* stream, char* program_name)
     fprintf(stream, "Usage: %s  fifo_path messages_to_send_count\n", program_name);
 }
 
+void get_date(char* date_buf, int buf_size)
+{
+    FILE* pout = popen("date", "r");
+    if (pout != NULL)
+    {
+        fread(date_buf, sizeof(char), buf_size, pout);
+        if (pclose(pout) == -1)
+        {
+            perror("pclose");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        perror("popen");
+        exit(EXIT_FAILURE);
+    }
+}
+
 void write_to_fifo(const char* fifo_path, int messages_count)
 {
     int fifo = open(fifo_path, O_WRONLY);
@@ -24,7 +43,10 @@ void write_to_fifo(const char* fifo_path, int messages_count)
         char buff[500];
         for (int i = 0; i < messages_count; ++i)
         {
-            snprintf(buff, 500, "PID %d date\n", pid);
+            char date[100];
+            get_date(date, 100);
+
+            snprintf(buff, 500, "PID %d Date: %s", pid, date);  // date should contain newline character
             write(fifo, buff, strlen(buff));
 
             int seconds_to_sleep = (int) (rand() / ((float) RAND_MAX) * 3 + 2);

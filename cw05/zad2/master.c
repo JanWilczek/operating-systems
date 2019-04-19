@@ -11,9 +11,9 @@ void print_usage(FILE *stream, char *program_name)
     fprintf(stream, "Usage: %s  fifo_path\n", program_name);
 }
 
-void read_from_fifo(const char *fifo_name)
+void read_from_fifo(const char *fifo_path)
 {
-    int fifo = open(fifo_name, O_RDONLY);
+    int fifo = open(fifo_path, O_RDONLY);
     if (fifo != -1)
     {
         const int BUF_LENGTH = 500;
@@ -44,6 +44,11 @@ void read_from_fifo(const char *fifo_name)
             }
         }
         close(fifo);
+        if (remove(fifo_path) == -1)
+        {
+            perror("remove");
+            exit(EXIT_FAILURE);
+        }
     }
     else
     {
@@ -63,13 +68,18 @@ int main(int argc, char *argv[])
     }
 
     // create FIFO pipe
-    if (access(argv[1], F_OK) == -1)    // check if already exists-if not, create
+    if (access(argv[1], F_OK) == -1)    // check if already exists-should not exist
     {
         if (mkfifo(argv[1], 0777) != 0)
         {
             perror("mkfifo");
             return EXIT_FAILURE;
         }
+    }
+    else
+    {
+        fprintf(stderr, "One master already running! There can be only one.\n");
+        exit(EXIT_FAILURE);
     }
 
     // read from FIFO pipe in a loop

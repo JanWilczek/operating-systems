@@ -3,7 +3,7 @@ TEMP_FLAGS=-g -Wall
 all: command_interpreter
 
 test: command_interpreter
-	./command_interpreter commands2
+	./command_interpreter commands
 
 command_interpreter: command_interpreter.o main.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) main.o command_interpreter.o -o command_interpreter

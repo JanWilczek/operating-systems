@@ -1,4 +1,4 @@
-cat /etc/passwd | awk -F: '{print $4}' | sort -n | uniq | wc -l
-cat /etc/passwd | awk -F: '{ print $4 }' | sort -n | uniq -c | sort -nr | head -1 | awk '{ print $2 }'
-ls -al ~ | grep '^-' | awk '{print $5,$9}' | sort -n | tail -n1 | awk '{print $2}'
-ls -als ~ | awk '{print $2,$1,$10}' | grep "^-" | awk '{print $2,$3}' | sort -nr | head -1 | awk '{print $2}'
+cat /etc/passwd | sort -n | uniq | wc -l
+cat /etc/passwd | sort -n | uniq -c | sort -nr | head -1
+ls -al /home | sort -n | tail -n10
+ls -als /usr/bin | sort -nr | head -1

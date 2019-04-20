@@ -24,24 +24,21 @@ void parse_and_interpret_commands(const char* commands_filename)
 
         while ((characters_read = getline(&line, &line_buffer_size, file)) != EOF)
         {
-            // the pipes-each process has one in and one out except the first process
+            // the pipes-each process has one in and one out except the first process-changes newline character to space character
             int fd_in[2];
             int fd_out[2];
 
             for (char* command_token = strtok_r(line, "|", &commands_saveptr); command_token != NULL; command_token = strtok_r(NULL, "|", &commands_saveptr))
             {
-                char* program_name = strtok_r(command_token, " ", &arguments_saveptr);
-                if (program_name == NULL)
-                {
-                    continue;
-                }
+                // This is a hack to have correct argument parsing
+                command_token[strlen(command_token) - 1] = ' ';
 
-                // parse program arguments in a loop
+                // parse program name and arguments in a loop
                 size_t arguments_size = 10;
                 char** arguments = malloc(arguments_size * sizeof(char*));
                 size_t nb_arguments = 0;
 
-                for (char* argument = strtok_r(NULL, " ", &arguments_saveptr); argument != NULL; argument = strtok_r(NULL, " ", &arguments_saveptr))
+                for (char* argument = strtok_r(command_token, " ", &arguments_saveptr); argument != NULL; argument = strtok_r(NULL, " ", &arguments_saveptr))
                 {
                     arguments[nb_arguments++] = argument;
                     if (nb_arguments >= arguments_size)
@@ -101,24 +98,21 @@ void parse_and_interpret_commands(const char* commands_filename)
                         close(fd_out[1]);
                     }
 
-                    printf("Executing %s", program_name);
-                    for (int k = 0; k < nb_arguments; ++k)
-                    {
-                        printf(" %s", arguments[k]);
-                    }
-                    printf("\n");
-                    execvp(command_token, arguments);   // exec functions return only on error
-                    perror("execvp");
+                    execvp(arguments[0], arguments);   
+                    perror("execvp");       // exec functions return only on error
 
-                    _exit(EXIT_SUCCESS);    // Here having normal exit results in peculiar behaviour
+                    _exit(EXIT_FAILURE);    // here having normal exit results in peculiar behaviour
 
-                    printf("This shouldn't be reached.\n");
+                    //printf("This shouldn't be reached.\n");
                 }
                 else
                 {
-                    // close - parent shouldn't use the inter-child pipe
-                    //close(fd_out[0]);
-                    //close(fd_out[1]);
+                    // close the completely joined pipe-parent shouldn't use the inter-child pipe
+                    if (nb_pids > 0)
+                    {
+                        close(fd_in[0]);
+                        close(fd_in[1]);
+                    }
 
                     pids[nb_pids++] = pid;
                     if (nb_pids >= pids_size)
@@ -136,18 +130,6 @@ void parse_and_interpret_commands(const char* commands_filename)
                 }
             }
 
-            // redirect last process's output to standard output
-            if (fd_in[0] != STDOUT_FILENO)
-            {
-                if (dup2(fd_in[0], STDOUT_FILENO) != STDOUT_FILENO)
-                {
-                    free(pids);
-                    free(line);
-                    perror("[parent] dup2 error to stdout");
-                    _exit(EXIT_FAILURE);
-                }
-                close(fd_in[0]);
-            }
             close(fd_in[1]);    // unused
 
             // wait for all the processes to end
@@ -160,6 +142,17 @@ void parse_and_interpret_commands(const char* commands_filename)
                 }
             }
             nb_pids = 0;    // reset the number of inserted pids
+                        
+            // read the standard output of the last command
+            printf("Output of given commands:\n");
+            char buffer[500];
+            while (read(fd_in[0], buffer, 500) != 0)
+            {
+                printf("%s", buffer);
+            }
+
+            // close the last descriptor
+            close(fd_in[0]);
         }
         
         free(pids);

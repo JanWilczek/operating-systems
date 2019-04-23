@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 #include "queue_common.h"
 #include "ipc_queue_sv.h"
 
@@ -12,20 +13,20 @@ void client_exit(void)
     if (queue)
     {
         remove_queue(queue);
+        queue = NULL;
     }
 
     if (server_queue)
     {
         free(server_queue);
+        server_queue = NULL;
     }
 }
 
 void sigint_handler(int signum)
 {
-    if (signum == SIGINT)
-    {
-        client_exit();
-    }
+    client_exit();
+    exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char *argv[])
@@ -46,7 +47,11 @@ int main(int argc, char *argv[])
     handler.sa_handler = sigint_handler;
     sigemptyset(&handler.sa_mask);
     handler.sa_flags = 0;
-    sigaction(SIGINT, &handler, NULL);
+    if (sigaction(SIGINT, &handler, NULL) != 0)
+    {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
 
     // 1. Create queue with unique IPC key
     queue = create_queue(CLIENT_QUEUE);
@@ -61,6 +66,10 @@ int main(int argc, char *argv[])
     // 3. Receive client ID
 
     // 4. Send requests in a loop
+    while (1)
+    {
+        sleep(1);
+    }
 
     return EXIT_SUCCESS;
 }

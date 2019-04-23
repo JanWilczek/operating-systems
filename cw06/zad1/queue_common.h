@@ -12,7 +12,9 @@ extern "C" {
 #define TOFRIENDS 6
 #define TOONE 7
 #define INIT 8
+#define SERVER_QUEUE_PROJ_ID 13884
 
+enum QueueType { SERVER_QUEUE, CLIENT_QUEUE };
 
 #ifdef __cplusplus
 }

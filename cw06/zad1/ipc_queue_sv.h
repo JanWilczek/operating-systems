@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+#include <stdlib.h>
 #include <sys/ipc.h>
 #include "queue_common.h"
 
@@ -15,17 +16,21 @@ typedef struct ipc_queue {
 /**
  * Creates an IPC queue and returns its ID.
  * */
-ipc_queue_t* create_queue(enum QueueType type);
+extern ipc_queue_t* create_queue(enum QueueType type);
 
 /**
  * Returns existing IPC queue.
  * */
-ipc_queue_t* get_queue(key_t key);
+extern ipc_queue_t* get_queue(key_t key);
 
 /**
  * Removes the queue from the system and frees the given pointer.
  * */
-void remove_queue(ipc_queue_t* queue_to_remove);
+extern void remove_queue(ipc_queue_t* queue_to_remove);
+
+extern int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* type);
+
+extern int send_message(ipc_queue_t* queue, char* buffer, long type);
 
 #ifdef __cplusplus
 }

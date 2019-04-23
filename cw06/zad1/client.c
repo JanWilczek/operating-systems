@@ -62,8 +62,20 @@ int main(int argc, char *argv[])
     printf("Server queue ID is %d\n", server_queue->id);
 
     // 2.b. Send the key to the server
+    char buffer[MSG_MAX_SIZE];
+    snprintf(buffer, sizeof(buffer), "%d", queue->key);
+    send_message(server_queue, buffer, INIT);
 
     // 3. Receive client ID
+    long type;
+    receive_message(queue, buffer, sizeof(buffer), &type);
+    if (type != INIT)
+    {
+        fprintf(stderr, "Invalid client-server communication.\n");
+        exit(EXIT_FAILURE);
+    }
+    long client_id = atoi(buffer);
+    printf("Client: My ID is %ld.\n", client_id);
 
     // 4. Send requests in a loop
     while (1)

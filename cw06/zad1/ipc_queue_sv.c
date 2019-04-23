@@ -3,8 +3,14 @@
 #include <sys/types.h>
 #include <sys/times.h>
 #include <sys/msg.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+
+struct msgbuf {
+    long mtype;
+    char mtext[MSG_MAX_SIZE];
+};
 
 ipc_queue_t* create_queue(enum QueueType type)
 {
@@ -72,4 +78,25 @@ void remove_queue(ipc_queue_t* queue_to_remove)
     }
 
     free(queue_to_remove);
+}
+
+int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* type)
+{
+    struct msgbuf msgp;
+    snprintf(msgp.mtext, sizeof(msgp.mtext), "%s", buffer);
+
+    int err = msgrcv(queue->id, &msgp, buffer_size, 0, 0);
+
+    *type = msgp.mtype;
+
+    return err;
+}
+
+int send_message(ipc_queue_t* queue, char* buffer, long type)
+{
+    struct msgbuf msgp;
+    msgp.mtype = type;
+    snprintf(msgp.mtext, sizeof(msgp.mtext), "%s", buffer);
+
+    return msgsnd(queue->id, (void *) &msgp, strlen(msgp.mtext), 0);
 }

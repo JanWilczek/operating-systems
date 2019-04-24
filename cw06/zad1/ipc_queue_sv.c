@@ -87,7 +87,6 @@ int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* 
     int err = msgrcv(queue->id, &msgp, buffer_size, 0, 0);
 
     *type = msgp.mtype;
-    //sprintf(buffer, "%s", msgp.mtext);
     strcpy(buffer, msgp.mtext);
 
     return err;
@@ -98,7 +97,6 @@ int send_message(ipc_queue_t* queue, char* buffer, long type)
     struct msgbuf msgp;
 
     msgp.mtype = type;
-    //snprintf(msgp.mtext, sizeof(msgp.mtext), "%s", buffer);
     strcpy(msgp.mtext, buffer);
 
     return msgsnd(queue->id, (void *) &msgp, strlen(msgp.mtext) + 1, 0);

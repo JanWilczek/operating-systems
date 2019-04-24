@@ -30,6 +30,14 @@ void sigint_handler(int signum)
     exit(EXIT_SUCCESS);
 }
 
+void client_loop(void)
+{
+    while (1)
+    {
+        sleep(1);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     // Initialize the global variables
@@ -60,11 +68,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Client: could not create a queue.\n");
         exit(EXIT_FAILURE);
     }
-    printf("Client queue ID is %d with key %d\n", queue->id, queue->key);
 
     // 2.a. Get server queue reference
     server_queue = get_queue(ftok(getenv("HOME"), SERVER_QUEUE_PROJ_ID));
-    printf("Server queue ID is %d\n", server_queue->id);
 
     // 2.b. Send the key to the server
     char buffer[MSG_MAX_SIZE];
@@ -89,13 +95,10 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     long client_id = atol(buffer);
-    printf("Client: My ID is %ld, read from %s.\n", client_id, buffer);\
+    printf("Client: My ID is %ld.\n", client_id);\
 
     // 4. Send requests in a loop
-    while (1)
-    {
-        sleep(1);
-    }
+    client_loop();
 
     return EXIT_SUCCESS;
 }

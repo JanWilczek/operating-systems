@@ -33,7 +33,6 @@ void sigint_handler(int signum)
 void handle_init(char* keystring)
 {
     key_t key = atoi(keystring);
-    printf("Server: received keystring is %s which translates to %d.\n", keystring, key);
 
     ipc_queue_t* client_queue = NULL;
     if ((client_queue = get_queue(key)) == NULL)
@@ -52,11 +51,11 @@ void handle_init(char* keystring)
     }
     else 
     {
-        printf("Server: Sent message to client with ID %ld\n", client_id);
+        printf("Server: Registered client with ID %ld\n", client_id);
     }
 }
 
-void receive_and_handle_loop(void)
+void server_loop(void)
 {  
     long message_type;
     char message[MSG_MAX_SIZE];
@@ -98,10 +97,9 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Client: could not create a queue.\n");
         exit(EXIT_FAILURE);
     }
-    printf("Queue ID is %d.\n", server_queue->id);
 
     // 2. Receive and respond to messages
-    receive_and_handle_loop();
+    server_loop();
 
     return EXIT_SUCCESS;
 }

@@ -22,7 +22,7 @@ ipc_queue_t* create_queue(enum QueueType type)
             break;
         case CLIENT_QUEUE:
             srand(times(NULL));
-            proj_id = rand() / 2 - 1;
+            proj_id = rand() / 2 + 1;
             break;
         default:
             return NULL;
@@ -39,7 +39,7 @@ ipc_queue_t* create_queue(enum QueueType type)
 
     // 2. Create queue and receive its ID
     int queue_id;
-    if ((queue_id = msgget(queue_key, IPC_CREAT | IPC_EXCL)) == -1)
+    if ((queue_id = msgget(queue_key, IPC_CREAT | IPC_EXCL | 0700 /* permission bits */)) == -1)
     {
         perror("msgget (queue creation)");
         exit(EXIT_FAILURE);
@@ -58,7 +58,7 @@ ipc_queue_t* get_queue(key_t key)
     if ((queue_id = msgget(key, 0)) == -1)
     {
         perror("msgget (get existing queue)");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
     
     ipc_queue_t* ipc_queue = malloc(sizeof(ipc_queue_t));
@@ -83,11 +83,12 @@ void remove_queue(ipc_queue_t* queue_to_remove)
 int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* type)
 {
     struct msgbuf msgp;
-    snprintf(msgp.mtext, sizeof(msgp.mtext), "%s", buffer);
 
     int err = msgrcv(queue->id, &msgp, buffer_size, 0, 0);
 
     *type = msgp.mtype;
+    //sprintf(buffer, "%s", msgp.mtext);
+    strcpy(buffer, msgp.mtext);
 
     return err;
 }
@@ -95,8 +96,10 @@ int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* 
 int send_message(ipc_queue_t* queue, char* buffer, long type)
 {
     struct msgbuf msgp;
-    msgp.mtype = type;
-    snprintf(msgp.mtext, sizeof(msgp.mtext), "%s", buffer);
 
-    return msgsnd(queue->id, (void *) &msgp, strlen(msgp.mtext), 0);
+    msgp.mtype = type;
+    //snprintf(msgp.mtext, sizeof(msgp.mtext), "%s", buffer);
+    strcpy(msgp.mtext, buffer);
+
+    return msgsnd(queue->id, (void *) &msgp, strlen(msgp.mtext) + 1, 0);
 }

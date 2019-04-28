@@ -9,6 +9,14 @@
 ipc_queue_t *queue;
 ipc_queue_t *server_queue;
 
+//************** COMMANDS SENT TO THE SERVER **************
+void send_stop()
+{
+    send_message(server_queue, "", STOP);
+}
+
+//************** END OF COMMANDS SENT TO THE SERVER ************** 
+
 void client_exit(void)
 {
     if (queue)
@@ -72,6 +80,10 @@ void parse_and_interpret_command(char* buffer, int buffer_size)
         {
             printf("Stop command.\n");
         }
+        else if (strcasecmp(token, "read") == 0)
+        {
+            printf("Read command\n");
+        }
         else
         {
             print_command_usage();
@@ -85,11 +97,20 @@ void parse_and_interpret_command(char* buffer, int buffer_size)
 
 void client_loop(void)
 {
-    const int BUF_SIZE = 1024;
+    const int BUF_SIZE = MSG_MAX_SIZE;
     char buffer[BUF_SIZE];
+    long type;
 
     while (1)
     {
+        // Check if server has stopped
+        int err = receive_message(server_queue, buffer, BUF_SIZE, &type, 0);
+        if (err == 0 && type == STOP)
+        {
+            return; // STOP message from the server - end the client loop
+        }
+
+        // Get user command
         fgets(buffer, sizeof(buffer), stdin);
         parse_and_interpret_command(buffer, BUF_SIZE);
         sleep(1);
@@ -133,16 +154,17 @@ int main(int argc, char *argv[])
     // 2.b. Send the key to the server
     char buffer[MSG_MAX_SIZE];
     sprintf(buffer, "%d", queue->key);
-    if (send_message(server_queue, buffer, INIT) == -1)
+    if (client_send_message(server_queue, -1, buffer, INIT) == -1)
     {
         perror("send_message (client init)");
         exit(EXIT_FAILURE);
     }
+    printf("My queue key is %s\n", buffer);
 
     // 3. Receive client ID
     memset(buffer, 0, sizeof(buffer));  // clear the buffer from previous messages
     long type;
-    if (receive_message(queue, buffer, sizeof(buffer), &type) == -1)
+    if (receive_message(queue, buffer, sizeof(buffer), &type, 1) == -1)
     {
         perror("receive_message (client init)");
         exit(EXIT_FAILURE);

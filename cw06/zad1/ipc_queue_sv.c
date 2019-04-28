@@ -5,10 +5,17 @@
 #include <sys/msg.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 
 struct msgbuf {
     long mtype;
+    char mtext[MSG_MAX_SIZE];
+};
+
+struct client_msg {
+    long mtype;
+    long mclient_id;
     char mtext[MSG_MAX_SIZE];
 };
 
@@ -80,11 +87,11 @@ void remove_queue(ipc_queue_t* queue_to_remove)
     free(queue_to_remove);
 }
 
-int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* type)
+int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* type, int block)
 {
     struct msgbuf msgp;
 
-    int err = msgrcv(queue->id, &msgp, buffer_size, 0, 0);
+    int err = msgrcv(queue->id, &msgp, buffer_size, 0, IPC_NOWAIT * (1 - block));
 
     *type = msgp.mtype;
     strcpy(buffer, msgp.mtext);
@@ -100,4 +107,48 @@ int send_message(ipc_queue_t* queue, char* buffer, long type)
     strcpy(msgp.mtext, buffer);
 
     return msgsnd(queue->id, (void *) &msgp, strlen(msgp.mtext) + 1, 0);
+}
+
+int client_send_message(ipc_queue_t* server_queue, long client_id, char* buffer, long type)
+{
+    struct client_msg msg;
+
+    msg.mtype = type;
+    msg.mclient_id = client_id;
+    strcpy(msg.mtext, buffer);
+
+    return msgsnd(server_queue->id, (void *) &msg, sizeof(long) + strlen(msg.mtext) + 1, 0);
+}
+
+int client_receive_message(ipc_queue_t* client_queue, long client_id, char* buffer, size_t buffer_size, long* type, int block)
+{
+    struct msgbuf msg;
+
+    int err = msgrcv(client_queue->id, &msg, buffer_size, 0, IPC_NOWAIT * (1 - block));
+
+    if (msg.mtype != client_id && msg.mtype != STOP)
+    {
+        fprintf(stderr, "Incorrectly addressed message in client's queue: is %ld should be %ld.\n", msg.mtype, client_id);
+        return -1;
+    }
+
+    *type = msg.mtype;
+    strcpy(buffer, msg.mtext);
+
+    return err;
+}
+
+int server_receive_client_message(ipc_queue_t* server_queue, long* client_id, char* buffer, size_t buffer_size, long* type, int block)
+{
+    struct client_msg msg;
+
+    int err = msgrcv(server_queue->id, &msg, buffer_size, 0, IPC_NOWAIT * (1 - block));
+    int err_no = errno; // copy errno, since it may be modified by a call to strcpy
+
+    *client_id = msg.mclient_id;
+    *type = msg.mtype;
+    strcpy(buffer, msg.mtext);
+
+    errno = err_no;
+    return err;
 }

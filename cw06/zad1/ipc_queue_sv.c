@@ -92,10 +92,12 @@ int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* 
     struct msgbuf msgp;
 
     int err = msgrcv(queue->id, &msgp, buffer_size, 0, IPC_NOWAIT * (1 - block));
+    int err_no = errno; // copy errno, since it may be modified by a call to strcpy
 
     *type = msgp.mtype;
     strcpy(buffer, msgp.mtext);
 
+    errno = err_no;
     return err;
 }
 

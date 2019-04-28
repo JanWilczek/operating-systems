@@ -10,7 +10,6 @@ ipc_queue_t *server_queue;
 long next_free_id;
 ipc_queue_t *client_queues[MAX_CLIENTS];
 
-
 //************** SERVER COMMANDS HANDLING **************
 
 void handle_init(char *keystring)
@@ -68,7 +67,11 @@ void server_exit(void)
         {
             long client_id;
             long type;
-            server_receive_client_message(server_queue, &client_id, buffer, MSG_MAX_SIZE, &type, 1);
+            if (server_receive_client_message(server_queue, &client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
+            {
+                perror("server_receive_client_message");
+                continue;
+            }
 
             if (type == STOP)
             {

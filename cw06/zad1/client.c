@@ -30,10 +30,68 @@ void sigint_handler(int signum)
     exit(EXIT_SUCCESS);
 }
 
+void print_command_usage(void)
+{
+    fprintf(stderr, "Invalid command!\n");
+}
+
+void parse_and_interpret_command(char* buffer, int buffer_size)
+{
+    // Change newline character to space for parsing ease
+    buffer[strlen(buffer) - 1] = ' ';
+
+    char* token = strtok(buffer, " ");
+    
+    if (token != NULL)
+    {
+        if (strcasecmp(token, "list") == 0)
+        {
+            printf("List command.\n");
+        }
+        else if (strcasecmp(token, "echo") == 0)
+        {
+            printf("Echo command.\n");
+        }
+        else if (strcasecmp(token, "friends") == 0)
+        {
+            printf("Friends command.\n");
+        }
+        else if (strcasecmp(token, "2all") == 0)
+        {
+            printf("2All command.\n");
+        }
+        else if (strcasecmp(token, "2friends") == 0)
+        {
+            printf("2Friends command.\n");
+        }
+        else if (strcasecmp(token, "2one") == 0)
+        {
+            printf("2One command.\n");
+        }
+        else if (strcasecmp(token, "stop") == 0)
+        {
+            printf("Stop command.\n");
+        }
+        else
+        {
+            print_command_usage();
+        }
+    }
+    else
+    {
+        print_command_usage();
+    }
+}
+
 void client_loop(void)
 {
+    const int BUF_SIZE = 1024;
+    char buffer[BUF_SIZE];
+
     while (1)
     {
+        fgets(buffer, sizeof(buffer), stdin);
+        parse_and_interpret_command(buffer, BUF_SIZE);
         sleep(1);
     }
 }

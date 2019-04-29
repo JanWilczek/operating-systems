@@ -8,17 +8,23 @@
 
 ipc_queue_t *queue;
 ipc_queue_t *server_queue;
+long client_id;
 
 //************** COMMANDS SENT TO THE SERVER **************
 void send_stop()
 {
-    send_message(server_queue, "", STOP);
+    if (client_send_message(server_queue, client_id, "", STOP) == -1)
+    {
+        perror("client_send_message");
+    }
 }
 
 //************** END OF COMMANDS SENT TO THE SERVER ************** 
 
 void client_exit(void)
 {
+    send_stop();
+
     if (queue)
     {
         remove_queue(queue);
@@ -79,6 +85,7 @@ void parse_and_interpret_command(char* buffer, int buffer_size)
         else if (strcasecmp(token, "stop") == 0)
         {
             printf("Stop command.\n");
+            exit(EXIT_SUCCESS); // this should automatically call client_exit
         }
         else if (strcasecmp(token, "read") == 0)
         {
@@ -104,7 +111,7 @@ void client_loop(void)
     while (1)
     {
         // Check if server has stopped
-        int err = receive_message(server_queue, buffer, BUF_SIZE, &type, 0);
+        int err = receive_message(queue, buffer, BUF_SIZE, &type, 0);
         if (err == 0 && type == STOP)
         {
             return; // STOP message from the server - end the client loop
@@ -122,6 +129,7 @@ int main(int argc, char *argv[])
     // Initialize the global variables
     queue = NULL;
     server_queue = NULL;
+    client_id = -1;
 
     // Handle normal process termination
     if (atexit(client_exit) != 0)
@@ -159,7 +167,7 @@ int main(int argc, char *argv[])
         perror("send_message (client init)");
         exit(EXIT_FAILURE);
     }
-    printf("My queue key is %s\n", buffer);
+    // printf("My queue key is %s\n", buffer);
 
     // 3. Receive client ID
     memset(buffer, 0, sizeof(buffer));  // clear the buffer from previous messages
@@ -174,7 +182,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Invalid client-server communication.\n");
         exit(EXIT_FAILURE);
     }
-    long client_id = atol(buffer);
+    client_id = atol(buffer);
     printf("Client: My ID is %ld.\n", client_id);\
 
     // 4. Send requests in a loop

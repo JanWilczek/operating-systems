@@ -66,7 +66,7 @@ void server_exit(void)
         while (stopped < to_stop)
         {
             long client_id;
-            long type;
+            long type = 0;
             if (server_receive_client_message(server_queue, &client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
             {
                 perror("server_receive_client_message");
@@ -93,7 +93,7 @@ void sigint_handler(int signum)
 
 void server_loop(void)
 {
-    long message_type;
+    long message_type = 0;
     long client_id;
     char message[MSG_MAX_SIZE];
 

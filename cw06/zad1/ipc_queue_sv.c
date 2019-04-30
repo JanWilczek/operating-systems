@@ -91,7 +91,7 @@ int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* 
 {
     struct msgbuf msgp;
 
-    int err = msgrcv(queue->id, &msgp, buffer_size, 0, IPC_NOWAIT * (1 - block));
+    int err = msgrcv(queue->id, &msgp, buffer_size, *type, IPC_NOWAIT * (1 - block));
     int err_no = errno; // copy errno, since it may be modified by a call to strcpy
 
     *type = msgp.mtype;
@@ -126,7 +126,7 @@ int client_receive_message(ipc_queue_t* client_queue, long client_id, char* buff
 {
     struct msgbuf msg;
 
-    int err = msgrcv(client_queue->id, &msg, buffer_size, 0, IPC_NOWAIT * (1 - block));
+    int err = msgrcv(client_queue->id, &msg, buffer_size, *type, IPC_NOWAIT * (1 - block));
 
     if (msg.mtype != client_id && msg.mtype != STOP)
     {
@@ -144,7 +144,7 @@ int server_receive_client_message(ipc_queue_t* server_queue, long* client_id, ch
 {
     struct client_msg msg;
 
-    int err = msgrcv(server_queue->id, &msg, buffer_size, 0, IPC_NOWAIT * (1 - block));
+    int err = msgrcv(server_queue->id, &msg, buffer_size, *type, IPC_NOWAIT * (1 - block));
     int err_no = errno; // copy errno, since it may be modified by a call to strcpy
 
     *client_id = msg.mclient_id;

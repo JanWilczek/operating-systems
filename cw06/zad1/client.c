@@ -3,23 +3,29 @@
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 #include "queue_common.h"
 #include "ipc_queue_sv.h"
 
 ipc_queue_t *queue;
 ipc_queue_t *server_queue;
+pthread_t server_stop_watcher;
 long client_id;
 
 //************** COMMANDS SENT TO THE SERVER **************
 void send_stop()
 {
-    if (client_send_message(server_queue, client_id, "", STOP) == -1)
+    // This is a hack, because probably the slave thread enters this function (after the main thread)
+    if (server_queue)
     {
-        perror("client_send_message");
+        if (client_send_message(server_queue, client_id, "", STOP) == -1)
+        {
+            perror("client_send_message");
+        }
     }
 }
 
-//************** END OF COMMANDS SENT TO THE SERVER ************** 
+//************** END OF COMMANDS SENT TO THE SERVER **************
 
 void client_exit(void)
 {
@@ -49,13 +55,13 @@ void print_command_usage(void)
     fprintf(stderr, "Invalid command!\n");
 }
 
-void parse_and_interpret_command(char* buffer, int buffer_size)
+void parse_and_interpret_command(char *buffer, int buffer_size)
 {
     // Change newline character to space for parsing ease
     buffer[strlen(buffer) - 1] = ' ';
 
-    char* token = strtok(buffer, " ");
-    
+    char *token = strtok(buffer, " ");
+
     if (token != NULL)
     {
         if (strcasecmp(token, "list") == 0)
@@ -102,21 +108,49 @@ void parse_and_interpret_command(char* buffer, int buffer_size)
     }
 }
 
+void *server_stop_watch(void *main_thread_id_ptr)
+{
+    pthread_t main_thread_id = *((pthread_t *)main_thread_id_ptr);
+
+    // Check if server has stopped
+    long type = STOP;
+    const int BUF_SIZE = 5;
+    char buffer[BUF_SIZE];
+    while (receive_message(queue, buffer, BUF_SIZE, &type, 0) == -1)
+    {
+        sleep(1);
+    }
+
+    //if (raise(SIGINT) != 0)
+    if (pthread_kill(main_thread_id, SIGINT))
+    {
+        perror("kill to self");
+        exit(EXIT_FAILURE);
+    }
+
+    return NULL;
+}
+
+void start_watch_thread(void)
+{
+    pthread_t main_thread_id = pthread_self();
+
+    if (pthread_create(&server_stop_watcher, NULL, server_stop_watch, &main_thread_id) != 0)
+    {
+        perror("pthread_create");
+        exit(EXIT_FAILURE);
+    }
+}
+
 void client_loop(void)
 {
+    start_watch_thread();
+
     const int BUF_SIZE = MSG_MAX_SIZE;
     char buffer[BUF_SIZE];
-    long type;
 
     while (1)
     {
-        // Check if server has stopped
-        int err = receive_message(queue, buffer, BUF_SIZE, &type, 0);
-        if (err == 0 && type == STOP)
-        {
-            return; // STOP message from the server - end the client loop
-        }
-
         // Get user command
         fgets(buffer, sizeof(buffer), stdin);
         parse_and_interpret_command(buffer, BUF_SIZE);
@@ -170,8 +204,8 @@ int main(int argc, char *argv[])
     // printf("My queue key is %s\n", buffer);
 
     // 3. Receive client ID
-    memset(buffer, 0, sizeof(buffer));  // clear the buffer from previous messages
-    long type;
+    memset(buffer, 0, sizeof(buffer)); // clear the buffer from previous messages
+    long type = INIT;
     if (receive_message(queue, buffer, sizeof(buffer), &type, 1) == -1)
     {
         perror("receive_message (client init)");
@@ -183,7 +217,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     client_id = atol(buffer);
-    printf("Client: My ID is %ld.\n", client_id);\
+    printf("Client: My ID is %ld.\n", client_id);
 
     // 4. Send requests in a loop
     client_loop();

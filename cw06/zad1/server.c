@@ -6,15 +6,18 @@
 #include <signal.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 
 ipc_queue_t *server_queue;
 long next_free_id;
-ipc_queue_t *client_queues[MAX_CLIENTS];
+ipc_queue_t *client_queues[MAX_CLIENTS + 1];
 
 //************** SERVER COMMANDS HANDLING **************
 
 void handle_init(char *keystring)
 {
+    // TODO: Handle denial of service, when there are too many clients
+
     key_t key = atoi(keystring);
 
     ipc_queue_t *client_queue = NULL;
@@ -49,6 +52,7 @@ void handle_echo(long client_id, const char* string)
     char buffer[MSG_MAX_SIZE];
     time_t t = time(NULL);
     snprintf(buffer, MSG_MAX_SIZE, "%s %s", string, ctime(&t));
+    buffer[strlen(buffer) - 1] = '\0';  // remove newline character at the end 
 
     if (send_message(client_queues[client_id], buffer, client_id) == -1)
     {
@@ -64,7 +68,7 @@ void server_exit(void)
     {
         // Send server stop message to clients and count how many are there
         long to_stop = 0L;
-        for (long i = 0L; i < next_free_id; ++i)
+        for (long i = 1L; i < next_free_id; ++i)
         {
             if (client_queues[i])
             {
@@ -106,19 +110,25 @@ void sigint_handler(int signum)
 
 void server_loop(void)
 {
-    long message_type = 0;
+    long message_type;
     long client_id;
     char message[MSG_MAX_SIZE];
 
     while (1)
     {
+        // Await all types of messages
+        message_type = 0L;
+
         if (server_receive_client_message(server_queue, &client_id, message, MSG_MAX_SIZE, &message_type, 1) == -1)
         {
-            perror("server_receive_client_message");
+            if (errno != ENOMSG)
+            {
+                perror("server_receive_client_message");
+            }
             continue;
         }
 
-        // printf("Received message from client %ld\n", client_id);
+        printf("Received message from client %ld\n", client_id);
 
         switch (message_type)
         {
@@ -131,15 +141,15 @@ void server_loop(void)
         case ECHO:
             handle_echo(client_id, message);
             break;
+        default:
+            fprintf(stderr, "Server: Unknown message type.\n");
         }
-
-        sleep(1);
     }
 }
 
 int main(int argc, char *argv[])
 {
-    next_free_id = 0L;
+    next_free_id = 1L; // numbering of clients starts with 1 (because sent messages should have mtype > 0)
     server_queue = NULL;
 
     // Establish a SIGINT handler

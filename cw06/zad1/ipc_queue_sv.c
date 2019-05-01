@@ -16,7 +16,7 @@ struct msgbuf {
 struct client_msg {
     long mtype;
     long mclient_id;
-    char mtext[MSG_MAX_SIZE];
+    char mtext[MSG_MAX_SIZE - sizeof(long)];
 };
 
 ipc_queue_t* create_queue(enum QueueType type)
@@ -92,12 +92,10 @@ int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* 
     struct msgbuf msgp;
 
     int err = msgrcv(queue->id, &msgp, buffer_size, *type, IPC_NOWAIT * (1 - block));
-    int err_no = errno; // copy errno, since it may be modified by a call to strcpy
 
     *type = msgp.mtype;
     strcpy(buffer, msgp.mtext);
 
-    errno = err_no;
     return err;
 }
 
@@ -145,12 +143,10 @@ int server_receive_client_message(ipc_queue_t* server_queue, long* client_id, ch
     struct client_msg msg;
 
     int err = msgrcv(server_queue->id, &msg, buffer_size, *type, IPC_NOWAIT * (1 - block));
-    int err_no = errno; // copy errno, since it may be modified by a call to strcpy
 
     *client_id = msg.mclient_id;
     *type = msg.mtype;
     strcpy(buffer, msg.mtext);
 
-    errno = err_no;
     return err;
 }

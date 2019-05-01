@@ -72,7 +72,7 @@ void print_command_usage(void)
 
 void parse_and_interpret_command(char *buffer, int buffer_size)
 {
-    // Change newline character to space for parsing ease
+    // Remove newline character from the end of the message
     buffer[strlen(buffer) - 1] = ' ';
 
     char *token = strtok(buffer, " ");
@@ -86,9 +86,7 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         else if (strcasecmp(token, "echo") == 0)
         {
             printf("Echo command.\n");
-            //buffer[strlen(buffer) - 1] = '\n'; // undo previous newline removal
-            //token = strtok(NULL, "\n");
-            send_echo(buffer + strlen(token));
+            send_echo(buffer + strlen(token) + 1);
         }
         else if (strcasecmp(token, "friends") == 0)
         {
@@ -139,7 +137,6 @@ void *server_stop_watch(void *main_thread_id_ptr)
         sleep(1);
     }
 
-    //if (raise(SIGINT) != 0)
     if (pthread_kill(main_thread_id, SIGINT))
     {
         perror("kill to self");
@@ -170,7 +167,7 @@ void client_loop(void)
     while (1)
     {
         // Get user command
-        fgets(buffer, sizeof(buffer), stdin);
+        fgets(buffer, BUF_SIZE, stdin);
         parse_and_interpret_command(buffer, BUF_SIZE);
         sleep(1);
     }

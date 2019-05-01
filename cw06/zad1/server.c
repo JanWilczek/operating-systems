@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <time.h>
 
 ipc_queue_t *server_queue;
 long next_free_id;
@@ -41,6 +42,18 @@ void handle_stop(long client_id)
 {
     free(client_queues[client_id]);
     client_queues[client_id] = NULL;
+}
+
+void handle_echo(long client_id, const char* string)
+{
+    char buffer[MSG_MAX_SIZE];
+    time_t t = time(NULL);
+    snprintf(buffer, MSG_MAX_SIZE, "%s %s", string, ctime(&t));
+
+    if (send_message(client_queues[client_id], buffer, client_id) == -1)
+    {
+        perror("send_message (ECHO response)");
+    }
 }
 
 //************** END OF SERVER COMMANDS HANDLING **************
@@ -114,6 +127,9 @@ void server_loop(void)
             break;
         case STOP:
             handle_stop(client_id);
+            break;
+        case ECHO:
+            handle_echo(client_id, message);
             break;
         }
 

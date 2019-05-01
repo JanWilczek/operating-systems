@@ -36,7 +36,7 @@ extern int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size,
 
 extern int send_message(ipc_queue_t* queue, char* buffer, long type);
 
-extern int client_send_message(ipc_queue_t* server_queue, long client_id, char* buffer, long type);
+extern int client_send_message(ipc_queue_t* server_queue, long client_id, const char* buffer, long type);
 extern int client_receive_message(ipc_queue_t* client_queue, long client_id, char* buffer, size_t buffer_size, long* type, int block);
 extern int server_receive_client_message(ipc_queue_t* server_queue, long* client_id, char* buffer, size_t buffer_size, long* type, int block);
 

@@ -15,14 +15,29 @@ long client_id;
 //************** COMMANDS SENT TO THE SERVER **************
 void send_stop()
 {
-    // This is a hack, because probably the slave thread enters this function (after the main thread)
-    if (server_queue)
+    if (client_send_message(server_queue, client_id, "", STOP) == -1)
     {
-        if (client_send_message(server_queue, client_id, "", STOP) == -1)
-        {
-            perror("client_send_message");
-        }
+        perror("client_send_message: STOP");
     }
+}
+
+void send_echo(const char *message)
+{
+    if (client_send_message(server_queue, client_id, message, ECHO) == -1)
+    {
+        perror("client_send_message (send ECHO)");
+        return;
+    }
+
+    char buffer[MSG_MAX_SIZE];
+    long type = client_id;
+    if (client_receive_message(queue, client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
+    {
+        perror("client_receive_message (send ECHO)");
+        return;
+    }
+
+    printf("%s\n", buffer);
 }
 
 //************** END OF COMMANDS SENT TO THE SERVER **************
@@ -46,7 +61,7 @@ void client_exit(void)
 
 void sigint_handler(int signum)
 {
-    client_exit();
+    // client_exit() will be called, since it has been registered with atexit().
     exit(EXIT_SUCCESS);
 }
 
@@ -71,6 +86,9 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         else if (strcasecmp(token, "echo") == 0)
         {
             printf("Echo command.\n");
+            //buffer[strlen(buffer) - 1] = '\n'; // undo previous newline removal
+            //token = strtok(NULL, "\n");
+            send_echo(buffer + strlen(token));
         }
         else if (strcasecmp(token, "friends") == 0)
         {

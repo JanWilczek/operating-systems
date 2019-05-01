@@ -111,7 +111,7 @@ int send_message(ipc_queue_t* queue, char* buffer, long type)
     return msgsnd(queue->id, (void *) &msgp, strlen(msgp.mtext) + 1, 0);
 }
 
-int client_send_message(ipc_queue_t* server_queue, long client_id, char* buffer, long type)
+int client_send_message(ipc_queue_t* server_queue, long client_id, const char* buffer, long type)
 {
     struct client_msg msg;
 

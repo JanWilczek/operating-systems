@@ -126,11 +126,11 @@ int client_receive_message(ipc_queue_t* client_queue, long client_id, char* buff
 
     int err = msgrcv(client_queue->id, &msg, buffer_size, *type, IPC_NOWAIT * (1 - block));
 
-    if (msg.mtype != client_id && msg.mtype != STOP)
-    {
-        fprintf(stderr, "Incorrectly addressed message in client's queue: is %ld should be %ld.\n", msg.mtype, client_id);
-        return -1;
-    }
+    // if (msg.mtype != client_id && msg.mtype != STOP)
+    // {
+    //     fprintf(stderr, "Incorrectly addressed message in client's queue: is %ld should be %ld.\n", msg.mtype, client_id);
+    //     return -1;
+    // }
 
     *type = msg.mtype;
     strcpy(buffer, msg.mtext);

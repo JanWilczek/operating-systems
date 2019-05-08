@@ -30,7 +30,7 @@ void send_echo(const char *message)
     }
 
     char buffer[MSG_MAX_SIZE];
-    long type = client_id;
+    long type = ECHO;
     if (client_receive_message(queue, client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
     {
         perror("client_receive_message (send ECHO)");
@@ -38,6 +38,14 @@ void send_echo(const char *message)
     }
 
     printf("%s\n", buffer);
+}
+
+void send_to_all(const char* message)
+{
+    if (client_send_message(server_queue, client_id, message, TOALL) == -1)
+    {
+        perror("client_send_message (send 2ALL)");
+    }
 }
 
 //************** END OF COMMANDS SENT TO THE SERVER **************
@@ -95,6 +103,7 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         else if (strcasecmp(token, "2all") == 0)
         {
             printf("2All command.\n");
+            send_to_all(buffer + strlen(token) + 1);
         }
         else if (strcasecmp(token, "2friends") == 0)
         {
@@ -134,8 +143,16 @@ void *server_stop_watch(void *main_thread_id_ptr)
     char buffer[BUF_SIZE];
     while (receive_message(queue, buffer, BUF_SIZE, &type, 0) == -1)
     {
+        // Print text messages from server
+        long server_text_message_type = client_id;
+        while (receive_message(queue, buffer, BUF_SIZE, &server_text_message_type, 0) == 0)
+        {
+            printf("%s\n", buffer);
+        }
+
         sleep(1);
     }
+    
 
     if (pthread_kill(main_thread_id, SIGINT))
     {

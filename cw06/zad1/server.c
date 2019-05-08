@@ -54,10 +54,15 @@ void handle_echo(long client_id, const char* string)
     snprintf(buffer, MSG_MAX_SIZE, "%s %s", string, ctime(&t));
     buffer[strlen(buffer) - 1] = '\0';  // remove newline character at the end 
 
-    if (send_message(client_queues[client_id], buffer, client_id) == -1)
+    if (send_message(client_queues[client_id], buffer, ECHO) == -1)
     {
         perror("send_message (ECHO response)");
     }
+}
+
+void handle_to_all(long client_id, const char* string)
+{
+    //for (i = 1; i < M)    
 }
 
 //************** END OF SERVER COMMANDS HANDLING **************

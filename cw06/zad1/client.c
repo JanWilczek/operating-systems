@@ -82,6 +82,26 @@ void send_to_friends(const char* message)
     }
 }
 
+void send_to_one(const char* message)
+{
+    // Check if the format is correct.
+    // The message itself will be sent as a whole string.
+    long receiver_id;
+    char buffer[MSG_MAX_SIZE - sizeof(receiver_id)];
+    if (sscanf(message, "%ld %[^\t\n]\n", &receiver_id, buffer) < 2)    // if less than 2 items have been assigned...
+    {
+        fprintf(stderr, "Invalid format of the command! Should be: 2ONE receiving_client_id message_string.\n");
+        return;
+    }
+
+    printf("Scanned:\n%ld\n%s\n", receiver_id, buffer);
+
+    if (client_send_message(server_queue, client_id, message, TOONE) == -1)
+    {
+        perror("client_send_message (send 2ONE)");
+    }
+}
+
 //************** END OF COMMANDS SENT TO THE SERVER **************
 
 void client_exit(void)
@@ -149,6 +169,7 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         else if (strcasecmp(token, "2one") == 0)
         {
             printf("2One command.\n");
+            send_to_one(buffer + strlen(token) + 1);
         }
         else if (strcasecmp(token, "stop") == 0)
         {

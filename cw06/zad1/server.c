@@ -175,6 +175,28 @@ void handle_to_friends(long client_id, const char* message)
     }
 }
 
+void handle_to_one(long client_id, const char* message)
+{
+    // Parse message
+    long receiver_id;
+    char buffer[MSG_MAX_SIZE - sizeof(receiver_id)];
+    if (sscanf(message, "%ld %[^\t\n]\n", &receiver_id, buffer) < 2)    // if less than 2 items have been assigned...
+    {
+        fprintf(stderr, "Invalid format of the command! Should be: 2ONE receiving_client_id message_string.\n");
+        return;
+    }
+
+    // Prepare message
+    char dest[MSG_MAX_SIZE];
+    format_message(client_id, buffer, dest);
+
+    // Send message
+    if (send_message(client_queues[receiver_id]->queue, dest, receiver_id) == -1)
+    {
+        perror("send_message (2ONE response)");
+    }
+}
+
 //************** END OF SERVER COMMANDS HANDLING **************
 
 void server_exit(void)
@@ -267,6 +289,9 @@ void server_loop(void)
             break;
         case TOFRIENDS:
             handle_to_friends(client_id, message);
+            break;
+        case TOONE:
+            handle_to_one(client_id, message);
             break;
         default:
             fprintf(stderr, "Server: Unknown message type.\n");

@@ -41,6 +41,23 @@ void send_echo(const char *message)
     printf("%s\n", buffer);
 }
 
+void send_list()
+{
+    if (client_send_message(server_queue, client_id, "", LIST) == -1)
+    {
+        perror("client_send_message (send LIST)");
+    }
+
+    char buffer[MSG_MAX_SIZE];
+    long type = LIST;
+    if (client_receive_message(queue, client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
+    {
+        perror("client_receive_message (send LIST)");
+    }
+
+    printf("%s", buffer);
+}
+
 void send_to_all(const char* message)
 {
     if (client_send_message(server_queue, client_id, message, TOALL) == -1)
@@ -91,6 +108,7 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         if (strcasecmp(token, "list") == 0)
         {
             printf("List command.\n");
+            send_list();
         }
         else if (strcasecmp(token, "echo") == 0)
         {

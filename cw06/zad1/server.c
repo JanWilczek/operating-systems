@@ -66,6 +66,36 @@ void handle_echo(long client_id, const char* string)
     }
 }
 
+void handle_list(long client_id)
+{
+    char buffer[MSG_MAX_SIZE] = "Active clients are: ";
+    char client_id_string[10];
+
+    for (long i = 0L; i < next_free_id; ++i)
+    {
+        if (client_queues[i])
+        {
+            if (i == client_id)
+            {
+                snprintf(client_id_string, sizeof(client_id_string), "%ld (You), ", i); 
+            }
+            else
+            {
+                snprintf(client_id_string, sizeof(client_id_string), "%ld, ", i);
+            }
+            
+            strcat(buffer, client_id_string);
+        }
+    }
+    buffer[strlen(buffer) - 2] = '.';
+    buffer[strlen(buffer) - 1] = '\0';
+
+    if (send_message(client_queues[client_id], buffer, LIST) == -1)
+    {
+        perror("send_message (LIST response)");
+    }
+}
+
 void handle_to_all(long client_id, const char* string)
 {
     // Prepare message
@@ -172,6 +202,9 @@ void server_loop(void)
             break;
         case TOALL:
             handle_to_all(client_id, message);
+            break;
+        case LIST:
+            handle_list(client_id);
             break;
         default:
             fprintf(stderr, "Server: Unknown message type.\n");

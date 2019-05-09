@@ -74,6 +74,14 @@ void send_to_all(const char* message)
     }
 }
 
+void send_to_friends(const char* message)
+{
+    if (client_send_message(server_queue, client_id, message, TOFRIENDS) == -1)
+    {
+        perror("client_send_message (send 2FRIENDS)");
+    }
+}
+
 //************** END OF COMMANDS SENT TO THE SERVER **************
 
 void client_exit(void)
@@ -136,6 +144,7 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         else if (strcasecmp(token, "2friends") == 0)
         {
             printf("2Friends command.\n");
+            send_to_friends(buffer + strlen(token) + 1);
         }
         else if (strcasecmp(token, "2one") == 0)
         {

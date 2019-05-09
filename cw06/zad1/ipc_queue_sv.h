@@ -34,7 +34,7 @@ extern void remove_queue(ipc_queue_t* queue_to_remove);
  * */
 extern int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* type, int block);
 
-extern int send_message(ipc_queue_t* queue, char* buffer, long type);
+extern int send_message(ipc_queue_t* queue, const char* buffer, long type);
 
 /**
  * Sends a message to server_queue containing type, client id and a string.

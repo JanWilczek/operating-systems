@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <errno.h>
 #include "queue_common.h"
 #include "ipc_queue_sv.h"
 
@@ -135,24 +136,37 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
 
 void *server_stop_watch(void *main_thread_id_ptr)
 {
+    // Receive main thread id and free the memory allocated for it
     pthread_t main_thread_id = *((pthread_t *)main_thread_id_ptr);
+    free(main_thread_id_ptr);
 
     // Check if server has stopped
     long type = STOP;
-    const int BUF_SIZE = 5;
-    char buffer[BUF_SIZE];
+    long server_text_message_type = client_id;
+    const int BUF_SIZE = MSG_MAX_SIZE;
+    // char buffer[BUF_SIZE];
+    char* buffer = malloc(sizeof(char) * BUF_SIZE);
     while (receive_message(queue, buffer, BUF_SIZE, &type, 0) == -1)
     {
+        sleep(1);
+
         // Print text messages from server
-        long server_text_message_type = client_id;
-        while (receive_message(queue, buffer, BUF_SIZE, &server_text_message_type, 0) == 0)
+        server_text_message_type = client_id;
+        int err;
+        while ((err = receive_message(queue, buffer, BUF_SIZE, &server_text_message_type, 0)) != -1)
         {
+            // printf("Received message from the server: \n");
             printf("%s\n", buffer);
+            server_text_message_type = client_id;
+        }
+        if (err == -1 && errno != ENOMSG)
+        {
+            perror("receive_message (watcher)");
         }
 
-        sleep(1);
+        type = STOP;
     }
-    
+    // printf("Received message of type %ld. STOP is %d\n", type, STOP);
 
     if (pthread_kill(main_thread_id, SIGINT))
     {
@@ -165,9 +179,11 @@ void *server_stop_watch(void *main_thread_id_ptr)
 
 void start_watch_thread(void)
 {
-    pthread_t main_thread_id = pthread_self();
+    // Data has to be allocated to avoid race condition on variable destruction
+    pthread_t* main_thread_id = malloc(sizeof(pthread_t));
+    *main_thread_id = pthread_self();
 
-    if (pthread_create(&server_stop_watcher, NULL, server_stop_watch, &main_thread_id) != 0)
+    if (pthread_create(&server_stop_watcher, NULL, server_stop_watch, main_thread_id) != 0)
     {
         perror("pthread_create");
         exit(EXIT_FAILURE);

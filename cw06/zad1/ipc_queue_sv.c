@@ -90,16 +90,22 @@ void remove_queue(ipc_queue_t* queue_to_remove)
 int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* type, int block)
 {
     struct msgbuf msgp;
+    // printf("Want to receive message of type %ld, buffer is %s\n", *type, buffer);
 
     int err = msgrcv(queue->id, &msgp, buffer_size, *type, IPC_NOWAIT * (1 - block));
 
     *type = msgp.mtype;
     strcpy(buffer, msgp.mtext);
 
+    // struct msqid_ds queue_info;
+    // msgctl(queue->id, IPC_STAT, &queue_info);   
+
+    // printf("Received message %s of type %ld, there are %ld messages in the queue.\n", msgp.mtext, msgp.mtype, queue_info.msg_qnum);
+
     return err;
 }
 
-int send_message(ipc_queue_t* queue, char* buffer, long type)
+int send_message(ipc_queue_t* queue, const char* buffer, long type)
 {
     struct msgbuf msgp;
 

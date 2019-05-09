@@ -29,6 +29,30 @@ void format_message(long client_id, const char* message, char *dest)
     snprintf(dest, MSG_MAX_SIZE, "%s Client %ld says: %s", t_string, client_id, message);
 }
 
+/**
+ * For a given client changes the state of all friends on the list to the
+ * one specified in the state argument:
+ * 1 => is friend,
+ * 0 => is not friend.
+ * */
+void change_friends_state(long client_id, const char* friends_list, int state)
+{
+    char* friends_list_copy = strdup(friends_list);
+    char delim[] = ", |\t";
+    for (char* token = strtok(friends_list_copy, delim); token != NULL; token = strtok(NULL, delim))
+    {
+        char* is_ok;
+        errno = 0;
+        long id = strtol(token, &is_ok, 10);
+        if (is_ok != token && errno != ERANGE && id != LONG_MIN && id != LONG_MAX && !(errno != 0 && id == 0) // if parsing ok
+            && id >= 1 && id < MAX_CLIENTS + 1 && id != client_id)                                            // if data ok
+        {
+            client_queues[client_id]->friends[id] = state;
+        }
+    }
+    free(friends_list_copy);
+}
+
 //---------- END OF HELPER METHODS -------------------
 
 void handle_init(char *keystring)
@@ -116,20 +140,12 @@ void handle_list(long client_id)
 
 void handle_add(long client_id, const char* friends_list)
 {
-    char* friends_list_copy = strdup(friends_list);
-    char delim[] = ", |\t";
-    for (char* token = strtok(friends_list_copy, delim); token != NULL; token = strtok(NULL, delim))
-    {
-        char* is_ok;
-        errno = 0;
-        long id = strtol(token, &is_ok, 10);
-        if (is_ok != token && errno != ERANGE && id != LONG_MIN && id != LONG_MAX && !(errno != 0 && id == 0) // if parsing ok
-            && id >= 1 && id < MAX_CLIENTS + 1 && id != client_id)                                            // if data ok
-        {
-            client_queues[client_id]->friends[id] = 1;
-        }
-    }
-    free(friends_list_copy);
+    change_friends_state(client_id, friends_list, 1);
+}
+
+void handle_del(long client_id, const char* friends_to_remove)
+{
+    change_friends_state(client_id, friends_to_remove, 0);
 }
 
 void handle_friends(long client_id, const char* friends_list)
@@ -294,6 +310,9 @@ void server_loop(void)
             break;
         case ADD:
             handle_add(client_id, message);
+            break;
+        case DEL:
+            handle_del(client_id, message);
             break;
         case TOFRIENDS:
             handle_to_friends(client_id, message);

@@ -74,6 +74,14 @@ void send_add(const char* friends_list)
     }
 }
 
+void send_del(const char* friends_to_remove)
+{
+    if (client_send_message(server_queue, client_id, friends_to_remove, DEL) == -1)
+    {
+        perror("client_send_message (send DEL)");
+    }
+}
+
 void send_to_all(const char* message)
 {
     if (client_send_message(server_queue, client_id, message, TOALL) == -1)
@@ -172,7 +180,7 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         else if (strcasecmp(token, "del") == 0)
         {
             printf("Del command.\n");
-
+            send_del(buffer + strlen(token) + 1);
         }
         else if (strcasecmp(token, "2all") == 0)
         {

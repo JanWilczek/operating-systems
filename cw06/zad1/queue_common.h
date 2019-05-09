@@ -19,6 +19,8 @@ extern "C" {
 #define TOFRIENDS MAX_CLIENTS + 1 + 6
 #define TOONE MAX_CLIENTS + 1 + 7
 #define INIT MAX_CLIENTS + 1 + 8
+#define ADD MAX_CLIENTS + 1 + 9
+#define DEL MAX_CLIENTS + 1 + 10
 
 enum QueueType { SERVER_QUEUE, CLIENT_QUEUE };
 

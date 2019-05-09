@@ -114,13 +114,8 @@ void handle_list(long client_id)
     }
 }
 
-void handle_friends(long client_id, const char* friends_list)
+void handle_add(long client_id, const char* friends_list)
 {
-    for (long i = 1L; i < MAX_CLIENTS + 1; ++i)
-    {
-        client_queues[client_id]->friends[i] = 0;
-    }
-
     char* friends_list_copy = strdup(friends_list);
     char delim[] = ", |\t";
     for (char* token = strtok(friends_list_copy, delim); token != NULL; token = strtok(NULL, delim))
@@ -135,6 +130,16 @@ void handle_friends(long client_id, const char* friends_list)
         }
     }
     free(friends_list_copy);
+}
+
+void handle_friends(long client_id, const char* friends_list)
+{
+    for (long i = 1L; i < MAX_CLIENTS + 1; ++i)
+    {
+        client_queues[client_id]->friends[i] = 0;
+    }
+
+    handle_add(client_id, friends_list);
 }
 
 void handle_to_all(long client_id, const char* message)
@@ -286,6 +291,9 @@ void server_loop(void)
             break;
         case FRIENDS:
             handle_friends(client_id, message);
+            break;
+        case ADD:
+            handle_add(client_id, message);
             break;
         case TOFRIENDS:
             handle_to_friends(client_id, message);

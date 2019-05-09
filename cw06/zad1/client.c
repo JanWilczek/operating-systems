@@ -13,6 +13,9 @@ ipc_queue_t *server_queue;
 pthread_t server_stop_watcher;
 long client_id;
 
+// Forward declarations
+void parse_and_interpret_command(char *buffer, int buffer_size);
+
 //************** COMMANDS SENT TO THE SERVER **************
 void send_stop()
 {
@@ -120,6 +123,28 @@ void send_to_one(const char* message)
 
 //************** END OF COMMANDS SENT TO THE SERVER **************
 
+void read_commands_from_file(const char* filename)
+{
+    FILE* file = fopen(filename, "r");
+    if (file != NULL)
+    {
+        char* line;
+        size_t size = 0u;
+
+        while (getline(&line, &size, file) != EOF)
+        {
+            parse_and_interpret_command(line, size);
+        }
+
+        free(line);
+        fclose(file);
+    }
+    else
+    {
+        perror("fopen");
+    }
+}
+
 void client_exit(void)
 {
     send_stop();
@@ -205,6 +230,8 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         else if (strcasecmp(token, "read") == 0)
         {
             printf("Read command\n");
+            buffer[strlen(buffer) - 1] = '\0';
+            read_commands_from_file(buffer + strlen(token) + 1);
         }
         else
         {

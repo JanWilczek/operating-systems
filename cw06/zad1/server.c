@@ -38,7 +38,7 @@ void format_message(long client_id, const char* message, char *dest)
 void change_friends_state(long client_id, const char* friends_list, int state)
 {
     char* friends_list_copy = strdup(friends_list);
-    char delim[] = ", |\t";
+    char delim[] = " ";
     for (char* token = strtok(friends_list_copy, delim); token != NULL; token = strtok(NULL, delim))
     {
         char* is_ok;

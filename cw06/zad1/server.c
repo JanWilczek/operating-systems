@@ -7,15 +7,29 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+#include <limits.h>
+
+struct client{
+    ipc_queue_t* queue;
+    int friends[MAX_CLIENTS + 1];  // client IDs of friends - 1 if friend 0 otherwise
+};
 
 ipc_queue_t *server_queue;
 long next_free_id;
-ipc_queue_t *client_queues[MAX_CLIENTS + 1];
+struct client *client_queues[MAX_CLIENTS + 1];
 
 //************** SERVER COMMANDS HANDLING **************
 
 void handle_init(char *keystring)
 {
+    long client_id = next_free_id++;
+    if (client_id > MAX_CLIENTS + 1)
+    {
+        // Too many clients - denial of service.
+        fprintf(stderr, "Cannot register more clients.\n");
+        return;
+    }
+
     key_t key = atoi(keystring);
 
     ipc_queue_t *client_queue = NULL;
@@ -24,16 +38,8 @@ void handle_init(char *keystring)
         return;
     }
 
-    long client_id = next_free_id++;
-    if (client_id > MAX_CLIENTS + 1)
-    {
-        // Too many clients - denial of service.
-        fprintf(stderr, "Cannot register more clients.\n");
-        free(client_queue);
-        return;
-    }
-
-    client_queues[client_id] = client_queue;
+    client_queues[client_id] = malloc(sizeof(struct client));
+    client_queues[client_id]->queue = client_queue;
 
     char buffer[MSG_MAX_SIZE];
     sprintf(buffer, "%ld", client_id);
@@ -49,6 +55,7 @@ void handle_init(char *keystring)
 
 void handle_stop(long client_id)
 {
+    free(client_queues[client_id]->queue);
     free(client_queues[client_id]);
     client_queues[client_id] = NULL;
 }
@@ -60,7 +67,7 @@ void handle_echo(long client_id, const char* string)
     snprintf(buffer, MSG_MAX_SIZE, "%s %s", string, ctime(&t));
     buffer[strlen(buffer) - 1] = '\0';  // remove newline character at the end 
 
-    if (send_message(client_queues[client_id], buffer, ECHO) == -1)
+    if (send_message(client_queues[client_id]->queue, buffer, ECHO) == -1)
     {
         perror("send_message (ECHO response)");
     }
@@ -71,7 +78,7 @@ void handle_list(long client_id)
     char buffer[MSG_MAX_SIZE] = "Active clients are: ";
     char client_id_string[10];
 
-    for (long i = 0L; i < next_free_id; ++i)
+    for (long i = 1L; i < next_free_id; ++i)
     {
         if (client_queues[i])
         {
@@ -90,10 +97,32 @@ void handle_list(long client_id)
     buffer[strlen(buffer) - 2] = '.';
     buffer[strlen(buffer) - 1] = '\0';
 
-    if (send_message(client_queues[client_id], buffer, LIST) == -1)
+    if (send_message(client_queues[client_id]->queue, buffer, LIST) == -1)
     {
         perror("send_message (LIST response)");
     }
+}
+
+void handle_friends(long client_id, const char* friends_list)
+{
+    for (long i = 1L; i < MAX_CLIENTS + 1; ++i)
+    {
+        client_queues[client_id]->friends[i] = 0;
+    }
+
+    char* friends_list_copy = strdup(friends_list);
+    char delim[] = ", |\t";
+    for (char* token = strtok(friends_list_copy, delim); token != NULL; token = strtok(NULL, delim))
+    {
+        char* is_ok;
+        errno = 0;
+        long id = strtol(token, &is_ok, 10);
+        if (is_ok != token && errno != ERANGE && id != LONG_MIN && id != LONG_MAX && !(errno != 0 && id == 0) && id >= 1 && id < MAX_CLIENTS + 1)
+        {
+            client_queues[client_id]->friends[id] = 1;
+        }
+    }
+    free(friends_list_copy);
 }
 
 void handle_to_all(long client_id, const char* string)
@@ -110,11 +139,10 @@ void handle_to_all(long client_id, const char* string)
     {
         if (client_queues[i] && i != client_id)
         {
-            if (send_message(client_queues[i], buffer, i) == -1)
+            if (send_message(client_queues[i]->queue, buffer, i) == -1)
             {
                 perror("send_message (2ALL response)");
             }
-            // printf("Send 2ALL message %s to client %ld\n.", string, i);
         }
     }
 }
@@ -132,7 +160,7 @@ void server_exit(void)
             if (client_queues[i])
             {
                 ++to_stop;
-                send_message(client_queues[i], "", STOP);
+                send_message(client_queues[i]->queue, "", STOP);
             }
         }
 
@@ -205,6 +233,9 @@ void server_loop(void)
             break;
         case LIST:
             handle_list(client_id);
+            break;
+        case FRIENDS:
+            handle_friends(client_id, message);
             break;
         default:
             fprintf(stderr, "Server: Unknown message type.\n");

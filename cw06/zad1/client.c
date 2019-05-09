@@ -55,7 +55,15 @@ void send_list()
         perror("client_receive_message (send LIST)");
     }
 
-    printf("%s", buffer);
+    printf("%s\n", buffer);
+}
+
+void send_friends(const char* friends_list)
+{
+    if (client_send_message(server_queue, client_id, friends_list, FRIENDS) == -1)
+    {
+        perror("client_send_message (send FRIENDS)");
+    }
 }
 
 void send_to_all(const char* message)
@@ -118,6 +126,7 @@ void parse_and_interpret_command(char *buffer, int buffer_size)
         else if (strcasecmp(token, "friends") == 0)
         {
             printf("Friends command.\n");
+            send_friends(buffer + strlen(token) + 1);
         }
         else if (strcasecmp(token, "2all") == 0)
         {

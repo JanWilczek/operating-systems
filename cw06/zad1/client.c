@@ -144,8 +144,7 @@ void *server_stop_watch(void *main_thread_id_ptr)
     long type = STOP;
     long server_text_message_type = client_id;
     const int BUF_SIZE = MSG_MAX_SIZE;
-    // char buffer[BUF_SIZE];
-    char* buffer = malloc(sizeof(char) * BUF_SIZE);
+    char buffer[BUF_SIZE];
     while (receive_message(queue, buffer, BUF_SIZE, &type, 0) == -1)
     {
         sleep(1);

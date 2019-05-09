@@ -68,11 +68,19 @@ void handle_echo(long client_id, const char* string)
 
 void handle_to_all(long client_id, const char* string)
 {
+    // Prepare message
+    char buffer[MSG_MAX_SIZE];
+    time_t t = time(NULL);
+    char* t_string = ctime(&t);
+    t_string[strlen(t_string) - 1] = '\0'; // remove newline character at the end
+    snprintf(buffer, MSG_MAX_SIZE, "%s Client %ld says: %s", t_string, client_id, string);
+
+    // Send message
     for (long i = 1L; i < next_free_id; ++i)
     {
         if (client_queues[i] && i != client_id)
         {
-            if (send_message(client_queues[i], string, i) == -1)
+            if (send_message(client_queues[i], buffer, i) == -1)
             {
                 perror("send_message (2ALL response)");
             }

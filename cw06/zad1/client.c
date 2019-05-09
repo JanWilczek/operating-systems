@@ -264,7 +264,6 @@ void *server_stop_watch(void *main_thread_id_ptr)
         int err;
         while ((err = receive_message(queue, buffer, BUF_SIZE, &server_text_message_type, 0)) != -1)
         {
-            // printf("Received message from the server: \n");
             printf("%s\n", buffer);
             server_text_message_type = client_id;
         }
@@ -275,7 +274,6 @@ void *server_stop_watch(void *main_thread_id_ptr)
 
         type = STOP;
     }
-    // printf("Received message of type %ld. STOP is %d\n", type, STOP);
 
     if (pthread_kill(main_thread_id, SIGINT))
     {
@@ -358,7 +356,6 @@ int main(int argc, char *argv[])
         perror("send_message (client init)");
         exit(EXIT_FAILURE);
     }
-    // printf("My queue key is %s\n", buffer);
 
     // 3. Receive client ID
     memset(buffer, 0, sizeof(buffer)); // clear the buffer from previous messages

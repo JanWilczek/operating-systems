@@ -285,8 +285,6 @@ void server_loop(void)
             continue;
         }
 
-        // printf("Received message from client %ld\n", client_id);
-
         switch (message_type)
         {
         case INIT:

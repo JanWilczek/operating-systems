@@ -90,17 +90,11 @@ void remove_queue(ipc_queue_t* queue_to_remove)
 int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* type, int block)
 {
     struct msgbuf msgp;
-    // printf("Want to receive message of type %ld, buffer is %s\n", *type, buffer);
 
     int err = msgrcv(queue->id, &msgp, buffer_size, *type, IPC_NOWAIT * (1 - block));
 
     *type = msgp.mtype;
     strcpy(buffer, msgp.mtext);
-
-    // struct msqid_ds queue_info;
-    // msgctl(queue->id, IPC_STAT, &queue_info);   
-
-    // printf("Received message %s of type %ld, there are %ld messages in the queue.\n", msgp.mtext, msgp.mtype, queue_info.msg_qnum);
 
     return err;
 }
@@ -131,12 +125,6 @@ int client_receive_message(ipc_queue_t* client_queue, long client_id, char* buff
     struct msgbuf msg;
 
     int err = msgrcv(client_queue->id, &msg, buffer_size, *type, IPC_NOWAIT * (1 - block));
-
-    // if (msg.mtype != client_id && msg.mtype != STOP)
-    // {
-    //     fprintf(stderr, "Incorrectly addressed message in client's queue: is %ld should be %ld.\n", msg.mtype, client_id);
-    //     return -1;
-    // }
 
     *type = msg.mtype;
     strcpy(buffer, msg.mtext);

@@ -52,7 +52,6 @@ void change_friends_state(long client_id, const char* friends_list, int state)
     }
     free(friends_list_copy);
 }
-
 //---------- END OF HELPER METHODS -------------------
 
 void handle_init(char *keystring)

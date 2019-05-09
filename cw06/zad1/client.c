@@ -123,7 +123,6 @@ void send_to_one(const char* message)
 
 void read_commands_from_file(const char* filename)
 {
-    printf("File to read: |%s|\n", filename);
     FILE* file = fopen(filename, "r");
     if (file != NULL)
     {
@@ -174,65 +173,64 @@ void print_command_usage(void)
 
 void parse_and_interpret_command(char *buffer, int buffer_size)
 {
-    // Remove newline character from the end of the message
-    // buffer[strlen(buffer) - 1] = ' ';
-
-    // char *token = strtok(buffer, " ");
-
-    // if (token != NULL)
     char command[20];
     char message[MSG_MAX_SIZE];
 
-    if (sscanf(buffer, "%s %[^\t\n]\n", command, message) >= 1)
+    int scanned = sscanf(buffer, "%s %[^\t\n]\n", command, message);
+
+    if (scanned == 1)
     {
+        // Handle one-argument commands
         if (strcasecmp(command, "list") == 0)
         {
-            printf("List command.\n");
             send_list();
         }
-        else if (strcasecmp(command, "echo") == 0)
+        else if (strcasecmp(command, "friends") == 0)
         {
-            printf("Echo command.\n");
+            send_friends("");
+        }
+        else if (strcasecmp(command, "stop") == 0)
+        {
+            exit(EXIT_SUCCESS); // this should automatically call client_exit
+        }
+        else
+        {
+            print_command_usage();
+        }
+    }
+    else if (scanned == 2)
+    {
+        // Handle two-argument commands
+        if (strcasecmp(command, "echo") == 0)
+        {
             send_echo(message);
         }
         else if (strcasecmp(command, "friends") == 0)
         {
-            printf("Friends command.\n");
             send_friends(message);
         }
         else if (strcasecmp(command, "add") == 0)
         {
-            printf("Add command.\n");
             send_add(message);
         }
         else if (strcasecmp(command, "del") == 0)
         {
-            printf("Del command.\n");
             send_del(message);
         }
         else if (strcasecmp(command, "2all") == 0)
         {
-            printf("2All command.\n");
             send_to_all(message);
         }
         else if (strcasecmp(command, "2friends") == 0)
         {
-            printf("2Friends command.\n");
             send_to_friends(message);
         }
         else if (strcasecmp(command, "2one") == 0)
         {
-            printf("2One command.\n");
             send_to_one(message);
-        }
-        else if (strcasecmp(command, "stop") == 0)
-        {
-            printf("Stop command.\n");
-            exit(EXIT_SUCCESS); // this should automatically call client_exit
         }
         else if (strcasecmp(command, "read") == 0)
         {
-            printf("Read command\n");
             read_commands_from_file(message);
         }
         else

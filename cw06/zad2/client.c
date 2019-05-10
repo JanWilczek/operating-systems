@@ -33,15 +33,15 @@ void send_echo(const char *message)
         return;
     }
 
-    char buffer[MSG_MAX_SIZE];
-    long type = ECHO;
-    if (client_receive_message(queue, client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
-    {
-        perror("client_receive_message (send ECHO)");
-        return;
-    }
+    // char buffer[MSG_MAX_SIZE];
+    // long type = ECHO;
+    // if (client_receive_message(queue, client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
+    // {
+    //     perror("client_receive_message (send ECHO)");
+    //     return;
+    // }
 
-    printf("%s\n", buffer);
+    // printf("%s\n", buffer);
 }
 
 void send_list()
@@ -51,14 +51,14 @@ void send_list()
         perror("client_send_message (send LIST)");
     }
 
-    char buffer[MSG_MAX_SIZE];
-    long type = LIST;
-    if (client_receive_message(queue, client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
-    {
-        perror("client_receive_message (send LIST)");
-    }
+    // char buffer[MSG_MAX_SIZE];
+    // long type = LIST;
+    // if (client_receive_message(queue, client_id, buffer, MSG_MAX_SIZE, &type, 1) == -1)
+    // {
+    //     perror("client_receive_message (send LIST)");
+    // }
 
-    printf("%s\n", buffer);
+    // printf("%s\n", buffer);
 }
 
 void send_friends(const char* friends_list)
@@ -253,28 +253,24 @@ void *server_stop_watch(void *main_thread_id_ptr)
     free(main_thread_id_ptr);
 
     // Check if server has stopped
-    long type = STOP;
-    long server_text_message_type = client_id;
+    long server_text_message_type = -1;
     const int BUF_SIZE = MSG_MAX_SIZE;
     char buffer[BUF_SIZE];
-    while (receive_message(queue, buffer, BUF_SIZE, &type, 0) == -1)
+    while (server_text_message_type != STOP)
     {
-        sleep(1);
-
         // Print text messages from server
-        server_text_message_type = client_id;
         int err;
-        while ((err = receive_message(queue, buffer, BUF_SIZE, &server_text_message_type, 0)) != -1)
+        if ((err = receive_message(queue, buffer, BUF_SIZE, &server_text_message_type, 0)) != -1)
         {
-            printf("%s\n", buffer);
-            server_text_message_type = client_id;
+            if (server_text_message_type != STOP)
+            {
+                printf("%s\n", buffer);
+            }
         }
-        if (err == -1 && errno != ENOMSG)
+        if (err == -1 && errno != EAGAIN)
         {
             perror("receive_message (watcher)");
         }
-
-        type = STOP;
     }
 
     if (pthread_kill(main_thread_id, SIGINT))
@@ -390,7 +386,7 @@ int main(int argc, char *argv[])
     printf("Client: My ID is %ld.\n", client_id);
 
     // 4. Send requests in a loop
-    // client_loop();
+    client_loop();
 
     return EXIT_SUCCESS;
 }

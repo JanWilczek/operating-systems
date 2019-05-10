@@ -99,7 +99,7 @@ int receive_message(ipc_queue_t* queue, char* buffer, size_t buffer_size, long* 
     unsigned int priority;
     ssize_t bytes_received = mq_receive(queue->queue_descriptor, buffer, buffer_size, &priority);
 
-    *type = priority;
+    *type = (long) priority;
 
     return bytes_received;
 }
@@ -116,7 +116,7 @@ int client_send_message(ipc_queue_t* server_queue, long client_id, const char* b
     msg[1] = (char) (client_id % 128);
     strcpy(msg + 2, buffer);
 
-    printf("Client sends message: %d %d %s\n", msg[0], msg[1], msg + 2);
+    // printf("Client sends message: %d %d %s\n", msg[0], msg[1], msg + 2);
     
     return mq_send(server_queue->queue_descriptor, msg, strlen(msg) + 1, 1);
 }
@@ -145,7 +145,7 @@ int server_receive_client_message(ipc_queue_t* server_queue, long* client_id, ch
         *client_id = (long) chr_id;
         strncpy(buffer, msg + 2, MSG_MAX_SIZE - 2);
         
-        printf("Server received message: %d %d %s\n", msg[0], msg[1], msg + 2);
+        // printf("Server received message: %d %d %s\n", msg[0], msg[1], msg + 2);
     }
 
     return bytes_read;

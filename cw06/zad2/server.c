@@ -285,7 +285,7 @@ void server_loop(void)
             continue;
         }
     
-        // printf("Server received message: %d %d %s\n", message[0], message[1], message + 2);
+        printf("Server received message: %ld %ld %s\n", message_type, client_id, message);
 
         switch (message_type)
         {

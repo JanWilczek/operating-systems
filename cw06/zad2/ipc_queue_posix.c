@@ -143,7 +143,7 @@ int server_receive_client_message(ipc_queue_t* server_queue, long* client_id, ch
         *type = (long) chr_type;
         char chr_id = msg[1];
         *client_id = (long) chr_id;
-        strncpy(buffer, msg, MSG_MAX_SIZE - 2); // I have no idea why it works.
+        strncpy(buffer, msg + 2, MSG_MAX_SIZE - 2);
         
         printf("Server received message: %d %d %s\n", msg[0], msg[1], msg + 2);
     }

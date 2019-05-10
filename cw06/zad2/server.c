@@ -87,6 +87,7 @@ void handle_init(char *keystring)
 
 void handle_stop(long client_id)
 {
+    close_queue(client_queues[client_id]->queue);
     free(client_queues[client_id]->queue);
     free(client_queues[client_id]);
     client_queues[client_id] = NULL;
@@ -283,6 +284,8 @@ void server_loop(void)
             }
             continue;
         }
+    
+        // printf("Server received message: %d %d %s\n", message[0], message[1], message + 2);
 
         switch (message_type)
         {

@@ -16,8 +16,8 @@ ipc_queue_t* create_queue(enum QueueType type)
             break;
         case CLIENT_QUEUE:
             srand(times(NULL));
-            proj_id = rand() / 2 + 1;
-            snprintf(name, 255, "/server_ipc_queue_%d", proj_id);
+            proj_id = (int) 3 * MAX_CLIENTS * ((float) rand() / (float) RAND_MAX) + 1;
+            snprintf(name, 255, "/client_ipc_queue_%d", proj_id);
             break;
         default:
             return NULL;
@@ -68,6 +68,7 @@ ipc_queue_t* get_queue(const char* name)
 
     ipc_queue_t* queue = malloc(sizeof(ipc_queue_t));
     queue->queue_descriptor = queue_descriptor;
+    queue->name = malloc(255 * sizeof(char));
     strcpy(queue->name, name);
 
     return queue;
@@ -111,11 +112,13 @@ int send_message(ipc_queue_t* queue, const char* buffer, long type)
 int client_send_message(ipc_queue_t* server_queue, long client_id, const char* buffer, long type)
 {
     char msg[MSG_MAX_SIZE];
-    msg[0] = (char) type;
-    msg[1] = (char) client_id;
+    msg[0] = (char) (type % 128);
+    msg[1] = (char) (client_id % 128);
     strcpy(msg + 2, buffer);
+
+    printf("Client sends message: %d %d %s\n", msg[0], msg[1], msg + 2);
     
-    return mq_send(server_queue->queue_descriptor, buffer, strlen(buffer) + 1, type);
+    return mq_send(server_queue->queue_descriptor, msg, strlen(msg) + 1, 1);
 }
 
 int client_receive_message(ipc_queue_t* client_queue, long client_id, char* buffer, size_t buffer_size, long* type, int block)
@@ -136,9 +139,13 @@ int server_receive_client_message(ipc_queue_t* server_queue, long* client_id, ch
 
     if (bytes_read != -1)
     {
-        *type = msg[0];
-        *client_id = msg[1];
-        strncpy(buffer, msg + 2, buffer_size);
+        char chr_type = msg[0];
+        *type = (long) chr_type;
+        char chr_id = msg[1];
+        *client_id = (long) chr_id;
+        strncpy(buffer, msg, MSG_MAX_SIZE - 2); // I have no idea why it works.
+        
+        printf("Server received message: %d %d %s\n", msg[0], msg[1], msg + 2);
     }
 
     return bytes_read;

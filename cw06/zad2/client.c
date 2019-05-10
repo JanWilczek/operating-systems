@@ -149,12 +149,14 @@ void client_exit(void)
 
     if (queue)
     {
+        close_queue(queue);
         remove_queue(queue);
         queue = NULL;
     }
 
     if (server_queue)
     {
+        close_queue(server_queue);
         free(server_queue);
         server_queue = NULL;
     }
@@ -338,7 +340,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // 1. Create queue with unique IPC key
+    // 1. Create queue with unique POSIX name
     if ((queue = create_queue(CLIENT_QUEUE)) == NULL)
     {
         fprintf(stderr, "Client: could not create a queue.\n");
@@ -346,14 +348,26 @@ int main(int argc, char *argv[])
     }
 
     // 2.a. Get server queue reference
-    const int NAME_SIZE = 1000;
-    char* name = malloc(NAME_SIZE);
-    //snprintf(name, NAME_SIZE, "/ipc_queue_%d", SERVER_QUEUE_PROJ_ID);
-    server_queue = get_queue(SERVER_NAME);
+    const int NAME_SIZE = 255;
+    char* name = malloc(NAME_SIZE * sizeof(char));
+    if (name == NULL)
+    {
+        perror("malloc");
+        exit (EXIT_FAILURE);
+    }
+
+    snprintf(name, NAME_SIZE, "%s", SERVER_NAME);
+    server_queue = get_queue(name);
+    if (server_queue == NULL)
+    {
+        perror("get_queue (get server queue on client)");
+        exit(EXIT_FAILURE);
+    }
+
     free(name);
 
     // 2.b. Send the name to the server
-    if (client_send_message(server_queue, -1, queue->name, INIT) == -1)
+    if (client_send_message(server_queue, NO_CLIENT_ID, queue->name, INIT) == -1)
     {
         perror("send_message (client init)");
         exit(EXIT_FAILURE);
@@ -376,7 +390,7 @@ int main(int argc, char *argv[])
     printf("Client: My ID is %ld.\n", client_id);
 
     // 4. Send requests in a loop
-    client_loop();
+    // client_loop();
 
     return EXIT_SUCCESS;
 }

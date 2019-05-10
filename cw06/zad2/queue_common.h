@@ -9,6 +9,7 @@ extern "C" {
 #define MAX_CLIENTS 32
 #define MSG_MAX_SIZE 8192
 #define SERVER_NAME "/server_ipc_queue"
+#define NO_CLIENT_ID 127
 
 // **** MESSAGE TYPES **** //
 #define STOP MAX_CLIENTS + 1 + 1

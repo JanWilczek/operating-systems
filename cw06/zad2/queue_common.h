@@ -4,11 +4,11 @@
 extern "C" {
 #endif
 
-#include <sys/ipc.h>
+//#include <sys/ipc.h>
 
 #define MAX_CLIENTS 32
-#define MSG_MAX_SIZE 1024
-#define SERVER_QUEUE_PROJ_ID 13884
+#define MSG_MAX_SIZE 8192
+#define SERVER_NAME "/server_ipc_queue"
 
 // **** MESSAGE TYPES **** //
 #define STOP MAX_CLIENTS + 1 + 1

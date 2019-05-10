@@ -253,6 +253,7 @@ void server_exit(void)
         }
 
         // Shut down the server queue
+        close_queue(server_queue);
         remove_queue(server_queue);
     }
 }
@@ -276,7 +277,7 @@ void server_loop(void)
 
         if (server_receive_client_message(server_queue, &client_id, message, MSG_MAX_SIZE, &message_type, 1) == -1)
         {
-            if (errno != ENOMSG)
+            if (errno != EAGAIN)
             {
                 perror("server_receive_client_message");
             }
@@ -340,7 +341,7 @@ int main(int argc, char *argv[])
     // 1. Create new queue (for client -> server communication)
     if ((server_queue = create_queue(SERVER_QUEUE)) == NULL)
     {
-        fprintf(stderr, "Client: could not create a queue.\n");
+        fprintf(stderr, "Server: could not create a queue.\n");
         exit(EXIT_FAILURE);
     }
 

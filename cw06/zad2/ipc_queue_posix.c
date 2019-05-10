@@ -1,37 +1,54 @@
-#include "queue_common.h"
 #include "ipc_queue_posix.h"
 #include <string.h>
 #include <sys/times.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 
 ipc_queue_t* create_queue(enum QueueType type)
 {
+    char* name = malloc(255 * sizeof(char));
     int proj_id;
     switch(type)
     {
         case SERVER_QUEUE:
-            proj_id = SERVER_QUEUE_PROJ_ID;
+            snprintf(name, 255, "%s", SERVER_NAME);
             break;
         case CLIENT_QUEUE:
             srand(times(NULL));
             proj_id = rand() / 2 + 1;
+            snprintf(name, 255, "/server_ipc_queue_%d", proj_id);
             break;
         default:
             return NULL;
     }
 
-    const int NAME_SIZE = 1000;
-    char* name = malloc(NAME_SIZE);
-    snprintf(name, NAME_SIZE, "/ipc_queue_%d", proj_id);
+    int flags = O_RDWR | O_CREAT;
+    if (type == CLIENT_QUEUE)
+    {
+        flags |= O_EXCL;
+    }
 
-    mqd_t queue_descriptor = mq_open(name, O_RDWR | O_CREAT | O_EXCL, 0700, NULL);
+    mqd_t queue_descriptor = mq_open(name, flags, 0700, NULL);
     if (queue_descriptor == -1)
     {
         perror("mq_open (queue creation)");
         free(name);
         return NULL;
     }
+
+    // Set queue properties
+    struct mq_attr attributes;
+    attributes.mq_maxmsg = 20;
+    attributes.mq_msgsize = MSG_MAX_SIZE;
+    struct mq_attr old;
+    if (mq_setattr(queue_descriptor, &attributes, &old) == -1)
+    {
+        perror("mq_setattr");
+        free(name);
+        return NULL;
+    }
+    // printf("Message size was %ld now is %ld\n", old.mq_msgsize, attributes.mq_msgsize);
 
     ipc_queue_t* queue = malloc(sizeof(ipc_queue_t));
     queue->queue_descriptor = queue_descriptor;
@@ -117,9 +134,12 @@ int server_receive_client_message(ipc_queue_t* server_queue, long* client_id, ch
     char msg[MSG_MAX_SIZE];
     ssize_t bytes_read = mq_receive(server_queue->queue_descriptor, msg, MSG_MAX_SIZE, NULL);
 
-    *type = msg[0];
-    *client_id = msg[1];
-    strncpy(buffer, msg + 2, buffer_size);
+    if (bytes_read != -1)
+    {
+        *type = msg[0];
+        *client_id = msg[1];
+        strncpy(buffer, msg + 2, buffer_size);
+    }
 
     return bytes_read;
 }

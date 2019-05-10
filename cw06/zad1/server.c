@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
     // 1. Create new queue (for client -> server communication)
     if ((server_queue = create_queue(SERVER_QUEUE)) == NULL)
     {
-        fprintf(stderr, "Client: could not create a queue.\n");
+        fprintf(stderr, "Server: could not create a queue.\n");
         exit(EXIT_FAILURE);
     }
 

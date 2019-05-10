@@ -348,8 +348,8 @@ int main(int argc, char *argv[])
     // 2.a. Get server queue reference
     const int NAME_SIZE = 1000;
     char* name = malloc(NAME_SIZE);
-    snprintf(name, NAME_SIZE, "/ipc_queue_%d", SERVER_QUEUE_PROJ_ID);
-    server_queue = get_queue(name);
+    //snprintf(name, NAME_SIZE, "/ipc_queue_%d", SERVER_QUEUE_PROJ_ID);
+    server_queue = get_queue(SERVER_NAME);
     free(name);
 
     // 2.b. Send the name to the server

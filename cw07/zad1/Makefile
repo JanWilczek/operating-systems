@@ -24,4 +24,4 @@ shared_queue.o: shared_queue.h shared_queue.c
 	gcc $(CFLAGS) $(FLAGS) -c shared_queue.c
 
 clean:
-	rm *.o trucker
+	rm *.o trucker loader

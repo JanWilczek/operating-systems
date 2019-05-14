@@ -1,14 +1,16 @@
 #pragma once
+#include <sys/types.h>
 
 #ifdef __cplusplus
     extern "C" {
 #endif
 
 typedef struct semaphore {
-
+    key_t key;
+    int id;
 } semaphore_t;
 
-extern semaphore_t* sem_init(int initial_value);
+extern semaphore_t* sem_init(char* pathname, int initial_value);
 
 /**
  * Calls sem_wait(semaphore, 1);

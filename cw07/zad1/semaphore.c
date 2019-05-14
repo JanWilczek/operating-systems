@@ -8,6 +8,8 @@
 
 #include "semaphore.h"
 
+#define PROJ_ID 'a'
+
 // Copied from man
 union semun {
     int val;               /* Value for SETVAL */
@@ -20,7 +22,7 @@ union semun {
 semaphore_t *sem_init(char *pathname, int initial_value)
 {
     // Create key
-    key_t semaphore_key = ftok(pathname, 'a');
+    key_t semaphore_key = ftok(pathname, PROJ_ID);
 
     // Create the semaphore
     int semaphore_id = semget(semaphore_key, 1, IPC_CREAT | IPC_EXCL | 0700);
@@ -48,7 +50,23 @@ semaphore_t *sem_init(char *pathname, int initial_value)
 
 semaphore_t* sem_get(char* pathname)
 {
-    return NULL;
+    // Create keys
+    key_t semaphore_key = ftok(pathname, PROJ_ID);
+
+    // Create the semaphore
+    int semaphore_id = semget(semaphore_key, 0, 0700);
+    if (semaphore_id == -1)
+    {
+        perror("semget");
+        return NULL;
+    }
+
+    // Create the wrapper
+    semaphore_t *semaphore = malloc(sizeof(semaphore_t));
+    semaphore->key = semaphore_key;
+    semaphore->id = semaphore_id;
+
+    return semaphore;
 }
 
 void sem_remove(semaphore_t* semaphore)
@@ -68,6 +86,14 @@ void sem_wait_one(semaphore_t *semaphore)
 
 void sem_wait(semaphore_t *semaphore, int value)
 {
+    struct sembuf op = {0, - value /* decrease semaphore value by value */, SEM_UNDO};
+    struct sembuf ops[1];
+    ops[0] = op;
+
+    if (semop(semaphore->id, ops, 1) == -1)
+    {
+        perror("semop (sem_wait)");
+    }
 }
 
 void sem_signal_one(semaphore_t *semaphore)
@@ -77,4 +103,12 @@ void sem_signal_one(semaphore_t *semaphore)
 
 void sem_signal(semaphore_t *semaphore, int value)
 {
+    struct sembuf op = {0, value /* increase semaphore value by value */, SEM_UNDO};
+    struct sembuf ops[1];
+    ops[0] = op;
+
+    if (semop(semaphore->id, ops, 1) == -1)
+    {
+        perror("semop (sem_signal)");
+    }
 }

@@ -50,7 +50,9 @@ int main(int argc, char *argv[])
     // argumentx X, K and M.
     int X, K, M;
 
-    trucker(X);
-    
+    //trucker(X);
+    semaphore_t* semaphore = sem_init("~/Documents/School/OperatingSystems/cw07/zad1/trucker_queue", 1);
+    sem_remove(semaphore);
+
     return EXIT_SUCCESS;
 }

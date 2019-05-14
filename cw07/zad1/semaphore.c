@@ -4,7 +4,6 @@
 /*  SYSTEM V HEADERS    */
 #include <sys/sem.h>
 #include <sys/ipc.h>
-#include <sys/types.h>
 /*     END HEADERS      */
 
 #include "semaphore.h"
@@ -45,6 +44,21 @@ semaphore_t *sem_init(char *pathname, int initial_value)
     semaphore->id = semaphore_id;
 
     return semaphore;
+}
+
+semaphore_t* sem_get(char* pathname)
+{
+    return NULL;
+}
+
+void sem_remove(semaphore_t* semaphore)
+{
+    if (semctl(semaphore->id, 0, IPC_RMID) == -1)
+    {
+        perror("semctl (remove semaphore)");
+    }
+
+    free(semaphore);
 }
 
 void sem_wait_one(semaphore_t *semaphore)

@@ -4,11 +4,21 @@
 #include <signal.h>
 #include "semaphore.h"
 #include "tape.h"
+#include "shared_resources.h"
 
 semaphore_t *tape_count;
 semaphore_t *is_package;
 // semaphore_t* tape_load;
 semaphore_t *truck_ready;
+
+void print_usage(const char* program_name)
+{
+    fprintf(stderr, "Usage:     %s X K M\n"
+                    "   X       number of packages the trucker can load\n"
+                    "   K       number of packages the tape can hold\n"
+                    "   M       total mass of packages the tape can hold\n", program_name);
+}
+
 
 void sigint_handler(int signum)
 {
@@ -39,7 +49,7 @@ void trucker_loop(int X)
     int count = 0;
     while (1)
     {
-        sem_wait_one(is_package);
+        sem_wait_one(is_package);   // wait for package
         int package_mass = tape_get_package();
         count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
 
@@ -47,7 +57,7 @@ void trucker_loop(int X)
         {
             // ERROR
             fprintf(stderr, "Fatal error: truck overloaded.\n");
-            exit(EXIT_FAILURE);
+            raise(SIGINT);
         }
 
         if (count == X)
@@ -65,9 +75,10 @@ void trucker_loop(int X)
 
 void trucker(int X, int K, int M)
 {
-    truck_ready = sem_init("~/truck_read", X);
-    tape_count = sem_init("~/tape_count", K);
-    is_package = sem_init("~/is_package", 0);
+    truck_ready = sem_init(SEM_TRUCK_READY, X);
+    // tape_load = sem_init(SEM_TAPE_LOAD, M);
+    tape_count = sem_init(SEM_TAPE_COUNT, K);
+    is_package = sem_init(SEM_IS_PACKAGE, 0);
 
     trucker_loop(X);
 }
@@ -77,20 +88,29 @@ int main(int argc, char *argv[])
     tape_count = NULL;
     is_package = NULL;
     truck_ready = NULL;
+    
+
+    if (argc != 4)
+    {
+        print_usage(argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    int X, K, M;
+    X = atoi(argv[1]);
+    K = atoi(argv[2]);
+    M = atoi(argv[3]);
 
     // Register SIGINT handler
     struct sigaction sa;
-    sa.handler = sigint_handler;
-    sigemptyset(&sa.mask);
-    sa.flags = 0;
+    sa.sa_handler = sigint_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
     if (sigaction(SIGINT, &sa, NULL) != 0)
     {
         perror("sigaction");
         exit(EXIT_FAILURE);
     }
-
-    // argumentx X, K and M.
-    int X, K, M;
 
     trucker(X, K, M);
 

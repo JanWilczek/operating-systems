@@ -4,7 +4,7 @@
     extern "C" {
 #endif
 
-
+char* get_precise_time(void);
 
 #ifdef __cplusplus
     }

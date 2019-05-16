@@ -4,9 +4,11 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <time.h>
 #include "shared_queue.h"
 #include "shared_resources.h"
 #include "semaphore.h"
+#include "time_stamp.h"
 
 
 struct queue_info
@@ -14,6 +16,13 @@ struct queue_info
     int size;
     int first_id;
     int last_id;
+};
+
+struct queue_entry
+{
+    pid_t loader_id;
+    struct timespec time_loaded;
+    int package_weight;
 };
 
 int queue_size()

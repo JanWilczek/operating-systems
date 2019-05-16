@@ -3,16 +3,10 @@
 #include "shared_queue.h"
 #include "shared_resources.h"
 
-// semaphore_t* queue_sem;
-// semaphore_t* tape_count_tape;   // new name not to pollute the global namespace
-// semaphore_t* is_package;
-
 void tape_init(int K)
 {
     semaphore_t* queue_sem = sem_init(SEM_QUEUE, 1);
     free(queue_sem);
-    // tape_count_tape = sem_get(SEM_TAPE_COUNT);
-    // is_package = sem_get(SEM_IS_PACKAGE);
     queue_init(K);
 }
 
@@ -53,6 +47,5 @@ void tape_close(void)
     semaphore_t* queue_sem = sem_get(SEM_QUEUE);
     sem_wait_one(queue_sem);
     sem_remove(queue_sem);
-    // free(tape_count_tape);
     queue_close();
 }

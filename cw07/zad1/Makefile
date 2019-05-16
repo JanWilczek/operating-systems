@@ -1,9 +1,12 @@
 FLAGS=-g -Wall
 
-all: trucker loader
+all: trucker loader loaders
 
 test: trucker
 	./trucker 10 5 20
+
+loaders: loader loaders.c
+	gcc $(CFLAGS) $(TEMP_FLAGS) loaders.c -o loaders
 
 loader: loader.o semaphore.o tape.o shared_queue.o
 	gcc $(CFLAGS) $(FLAGS) loader.o semaphore.o tape.o shared_queue.o -o loader
@@ -27,4 +30,4 @@ shared_queue.o: shared_queue.h shared_queue.c
 	gcc $(CFLAGS) $(FLAGS) -c shared_queue.c
 
 clean:
-	rm *.o trucker loader
+	rm *.o trucker loader loaders

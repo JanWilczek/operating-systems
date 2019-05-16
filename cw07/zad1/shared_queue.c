@@ -9,8 +9,6 @@
 #include "semaphore.h"
 
 
-// #define SEM_QUEUE "~/queue_sem"
-
 struct queue_info
 {
     int size;
@@ -50,7 +48,6 @@ void *get_queue(void)
 void queue_init(int size)
 {
     size_t size_in_bytes = sizeof(struct queue_info) + size * sizeof(int);
-    //size_in_bytes = 
     int mem_id = shmget(queue_key(), size_in_bytes /* elements */,
                      0700 | IPC_CREAT | IPC_EXCL);
 
@@ -77,9 +74,6 @@ void queue_init(int size)
 
 int queue_operation_wrapper(int (*operation)(struct queue_info *, int *, int *), int arg)
 {
-    // semaphore_t *queue_sem = sem_get(SEM_QUEUE);
-    // sem_wait_one(queue_sem);
-
     int result;
 
     void *memory = get_queue();
@@ -96,15 +90,19 @@ int queue_operation_wrapper(int (*operation)(struct queue_info *, int *, int *),
         }
     }
 
-    // sem_signal_one(queue_sem);
-    // free(queue_sem);
-
     return result;
 }
 
 int put_to_queue_internal(struct queue_info *qinfo, int *array, int *element)
 {
     int new_id = (qinfo->first_id + 1) % qinfo->size;
+    if (new_id == qinfo->last_id)
+    {
+        // Error: queue is full
+        fprintf(stderr, "Cannot put to a full queue!\n");
+        return -1;
+    }
+
     array[new_id] = *element;
 
     // if no elements were in the queue
@@ -112,13 +110,6 @@ int put_to_queue_internal(struct queue_info *qinfo, int *array, int *element)
     {
         qinfo->last_id = new_id;
     }
-    else if (qinfo->first_id + 1 == qinfo->last_id)
-    {
-        // Error: queue is full
-        fprintf(stderr, "Cannot put to a full queue!\n");
-        return -1;
-    }
-
     qinfo->first_id = new_id;
 
     return 0;
@@ -167,15 +158,11 @@ int queue_capacity_internal(struct queue_info *qinfo, int *array, int *element)
 
 int queue_capacity(void)
 {
-    // TODO: Fine grain operation wrapper between memory wrapper and semaphore wrapper
     return queue_operation_wrapper(queue_capacity_internal, 0);
 }
 
 void queue_close(void)
 {
-    // semaphore_t *queue_sem = sem_get(SEM_QUEUE);
-    // sem_wait_one(queue_sem);
-
     int queue_id = shmget(queue_key(), 0, 0);
     if (queue_id == -1)
     {
@@ -188,7 +175,4 @@ void queue_close(void)
             perror("shmctl");
         }
     }
-
-    // sem_signal_one(queue_sem);
-    // free(queue_sem);
 }

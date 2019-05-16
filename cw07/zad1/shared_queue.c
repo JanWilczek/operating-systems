@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <time.h>
+#include <string.h>
 #include "shared_queue.h"
 #include "semaphore.h"
 #include "time_stamp.h"
@@ -73,7 +74,7 @@ void queue_init(int size)
     shmdt(memory);
 }
 
-int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_entry *, struct queue_entry*), struct queue_element* arg)
+int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_entry *, struct queue_entry*), struct queue_entry* arg)
 {
     int result;
 
@@ -81,9 +82,9 @@ int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_e
     if (memory != NULL)
     {
         struct queue_info *qinfo = (struct queue_info *)memory;
-        int *array = memory + sizeof(struct queue_info);
+        struct queue_entry * array = memory + sizeof(struct queue_info);
 
-        result = operation(qinfo, array, &arg);
+        result = operation(qinfo, array, arg);
 
         if (shmdt(memory) == -1)
         {
@@ -130,8 +131,8 @@ int get_from_queue_internal(struct queue_info *qinfo, struct queue_entry *array,
         return -1;
     }
 
-    struct queue_entry* qe = malloc(sizeof(struct queue_entry));
-    memcpy(array + qinfo->last_id * sizeof(struct queue_entry), qe, sizeof(struct queue_entry));
+    // struct queue_entry* qe = malloc(sizeof(struct queue_entry));
+    memcpy(element, array + qinfo->last_id * sizeof(struct queue_entry), sizeof(struct queue_entry));
 
     if (qinfo->last_id == qinfo->first_id)
     {

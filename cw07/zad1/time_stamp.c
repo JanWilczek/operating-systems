@@ -1,6 +1,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "time_stamp.h"
 
 
@@ -17,7 +18,7 @@ char* get_precise_time(void)
     time_t seconds = (time_t) spec.tv_sec;
     struct tm* tms = localtime(&seconds);
     strftime(temp, sizeof(temp), "%H:%M:%S", tms);
-    sprintf(buffer, "%s:%d:%d", temp, ms, us);
+    sprintf(buffer, "%s:%ld:%ld", temp, ms, us);
 
     return buffer;
 }

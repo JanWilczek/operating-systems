@@ -5,6 +5,7 @@
 #include "semaphore.h"
 #include "tape.h"
 #include "shared_resources.h"
+#include "time_stamp.h"
 
 semaphore_t *tape_count;
 semaphore_t *is_package;
@@ -47,14 +48,24 @@ void sigint_handler(int signum)
     exit(EXIT_SUCCESS);
 }
 
+void print_message(const char* message)
+{
+    char* time_stamp = get_precise_time();
+    printf("%s Trucker: %s\n", time_stamp, message);
+    free(time_stamp);
+}
+
 void trucker_loop(int X)
 {
     int count = 0;
     while (1)
     {
+        print_message("Truck is waiting for a package.");
         sem_wait_one(is_package);   // wait for package
         int package_mass = tape_get_package();
         count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
+
+        // TODO: package received message
 
         if (count > X)
         {
@@ -66,9 +77,10 @@ void trucker_loop(int X)
         if (count == X)
         {
             // truck full
-            printf("Unloading truck.\n");
-            sleep(1);
+            print_message("End of space. Truck is leaving and unloading.");
+            sleep(2);
             count = 0;
+            print_message("Empty truck has arrived.");
         }
 
         // Signal that truck is ready for loading

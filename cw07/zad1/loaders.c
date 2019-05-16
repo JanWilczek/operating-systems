@@ -25,19 +25,20 @@ int main(int argc, char* argv[])
     int N = atoi(argv[2]);
     int C = 20;
 
-    srand(time(NULL));
     int n, c;
     for (int l = 0; l < L; ++l)
     {
         if (fork() == 0)
         {
-            n = ((float) rand()) / RAND_MAX * N;
+            srandom(getpid());
+            n = (int) ((((float) random()) / RAND_MAX) * (N - 1) + 1); 
             char n_string[128];
             sprintf(n_string, "%d", n);
-            c = (int) (((float) rand()) / RAND_MAX * C);
+            c = (int) ((((float) random()) / RAND_MAX) * C);
             char c_string[128];
             sprintf(c_string, "%d", c);
             char* args[] = {"./loader", n_string, c_string, NULL};
+            printf("Started loader with N=%s or %d and C=%s or %d\n", n_string, n, c_string, c);
             execv(args[0], args);
         }
     }

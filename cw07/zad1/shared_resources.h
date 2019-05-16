@@ -5,10 +5,13 @@
     extern "C" {
 #endif
 
-#define SEM_TRUCK_READY "~/truck_ready"
-#define SEM_TAPE_COUNT "~/tape_count"
-#define SEM_IS_PACKAGE "~/is_package"
-#define SEM_TAPE_LOAD "~/tape_load"
+#define SEM_TRUCK_READY 1
+#define SEM_TAPE_COUNT 2
+#define SEM_IS_PACKAGE 3
+#define SEM_TAPE_LOAD 4
+#define SEM_QUEUE 5
+#define SHM_QUEUE 6
+
 
 #ifdef __cplusplus
     }

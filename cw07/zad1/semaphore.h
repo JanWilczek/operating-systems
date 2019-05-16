@@ -10,8 +10,8 @@ typedef struct semaphore {
     int id;
 } semaphore_t;
 
-extern semaphore_t* sem_init(char* pathname, int initial_value);
-extern semaphore_t* sem_get(char* pathname);
+extern semaphore_t* sem_init(char proj_id, int initial_value);
+extern semaphore_t* sem_get(char proj_id);
 extern void sem_remove(semaphore_t* semaphore);
 
 /**

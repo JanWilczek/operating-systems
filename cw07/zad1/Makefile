@@ -2,10 +2,13 @@ FLAGS=-g -Wall
 
 all: trucker loader
 
+test: trucker
+	./trucker 10 5 20
+
 loader: loader.o semaphore.o tape.o shared_queue.o
 	gcc $(CFLAGS) $(FLAGS) loader.o semaphore.o tape.o shared_queue.o -o loader
 
-loader.o:semaphore.h tape.h loader.c
+loader.o: semaphore.h tape.h loader.c
 	gcc $(CFLAGS) $(FLAGS) -c loader.c
 
 trucker: trucker.o semaphore.o tape.o shared_queue.o
@@ -14,7 +17,7 @@ trucker: trucker.o semaphore.o tape.o shared_queue.o
 trucker.o: semaphore.h tape.h trucker.c
 	gcc $(CFLAGS) $(FLAGS) -c trucker.c
 
-tape.o: tape.h semaphore.h shared_queue.h
+tape.o: tape.c tape.h semaphore.h shared_queue.h
 	gcc $(CFLAGS) $(FLAGS) -c tape.c
 
 semaphore.o: semaphore.h semaphore.c

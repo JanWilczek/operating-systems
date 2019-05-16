@@ -4,9 +4,10 @@
     extern "C" {
 #endif
 
-extern void tape_init(int M, int K);
+extern void tape_init(int K);
 extern void tape_put_package(int N);
-extern int tape_get_package();
+extern int tape_get_package(void);
+extern void tape_close(void);
 
 #ifdef __cplusplus
     }

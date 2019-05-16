@@ -19,11 +19,12 @@ void print_usage(const char* program_name)
                     "   M       total mass of packages the tape can hold\n", program_name);
 }
 
-
 void sigint_handler(int signum)
 {
     if (signum == SIGINT)
     {
+        tape_close();
+
         if (tape_count)
         {
             sem_remove(tape_count);
@@ -42,6 +43,8 @@ void sigint_handler(int signum)
             truck_ready = NULL;
         }
     }
+
+    exit(EXIT_SUCCESS);
 }
 
 void trucker_loop(int X)
@@ -80,6 +83,7 @@ void trucker(int X, int K, int M)
     tape_count = sem_init(SEM_TAPE_COUNT, K);
     is_package = sem_init(SEM_IS_PACKAGE, 0);
 
+    tape_init(K);
     trucker_loop(X);
 }
 
@@ -89,7 +93,6 @@ int main(int argc, char *argv[])
     is_package = NULL;
     truck_ready = NULL;
     
-
     if (argc != 4)
     {
         print_usage(argv[0]);

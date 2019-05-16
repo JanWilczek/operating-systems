@@ -19,10 +19,10 @@ union semun {
                                            (Linux-specific) */
 };
 
-semaphore_t *sem_init(char *pathname, int initial_value)
+semaphore_t *sem_init(char proj_id, int initial_value)
 {
     // Create key
-    key_t semaphore_key = ftok(pathname, PROJ_ID);
+    key_t semaphore_key = ftok(getenv("HOME"), (int) proj_id);
 
     // Create the semaphore
     int semaphore_id = semget(semaphore_key, 1, IPC_CREAT | IPC_EXCL | 0700);
@@ -48,10 +48,10 @@ semaphore_t *sem_init(char *pathname, int initial_value)
     return semaphore;
 }
 
-semaphore_t* sem_get(char* pathname)
+semaphore_t* sem_get(char proj_id)
 {
     // Create keys
-    key_t semaphore_key = ftok(pathname, PROJ_ID);
+    key_t semaphore_key = ftok(getenv("HOME"), proj_id);
 
     // Create the semaphore
     int semaphore_id = semget(semaphore_key, 0, 0700);

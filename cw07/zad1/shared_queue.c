@@ -5,9 +5,10 @@
 #include <sys/types.h>
 #include <signal.h>
 #include "shared_queue.h"
+#include "shared_resources.h"
 #include "semaphore.h"
 
-#define SHM_QUEUE "~/tape_queue"
+
 // #define SEM_QUEUE "~/queue_sem"
 
 struct queue_info
@@ -24,7 +25,7 @@ int queue_size()
 
 key_t queue_key(void)
 {
-    return ftok(SHM_QUEUE, 'a');
+    return ftok(getenv("HOME"), SHM_QUEUE);
 }
 
 void *get_queue(void)
@@ -48,16 +49,18 @@ void *get_queue(void)
 
 void queue_init(int size)
 {
-    int err = shmget(queue_key(), sizeof(struct queue_info) + size * sizeof(int) /* elements */,
+    size_t size_in_bytes = sizeof(struct queue_info) + size * sizeof(int);
+    //size_in_bytes = 
+    int mem_id = shmget(queue_key(), size_in_bytes /* elements */,
                      0700 | IPC_CREAT | IPC_EXCL);
 
-    if (err == -1)
+    if (mem_id == -1)
     {
         perror("shmget");
         raise(SIGINT);
     }
 
-    void *memory = shmat(queue_key(), NULL, 0);
+    void *memory = shmat(mem_id, NULL, 0);
     if (memory == (void *)-1)
     {
         perror("shmat");

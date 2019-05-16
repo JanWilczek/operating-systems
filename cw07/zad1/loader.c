@@ -36,6 +36,13 @@ void sigint_handler(int signum)
     // {
 
     // }
+    if (is_package)
+    {
+        free(is_package);
+        is_package = NULL;
+    }
+
+    exit(EXIT_SUCCESS);
 }
 
 void loader_loop(int N)
@@ -49,7 +56,6 @@ void loader_loop(int N)
 
 void loader(int N, int C)
 {
-    // TODO: get all needed semaphores
     truck_ready = sem_get(SEM_TRUCK_READY);
     tape_count = sem_get(SEM_TAPE_COUNT);
     // tape_load = sem_get(SEM_TAPE_LOAD);

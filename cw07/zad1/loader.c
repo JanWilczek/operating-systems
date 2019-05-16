@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
     int C = 0;
     int N;
 
-    if (argc > 3 || argc == 0)
+    if (argc > 3 || argc == 1)
     {
         print_usage(argv[0]);
         return EXIT_FAILURE;

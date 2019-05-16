@@ -28,10 +28,7 @@ int tape_get_package()
 {
     sem_wait_one(queue_sem);        // lock "mutex"
     int N = get_from_queue();   // operation on shared memory, synchronized through queue_sem
-    if (queue_size() < queue_capacity())
-    {
-        sem_signal_one(tape_count);
-    }
+    sem_signal_one(tape_count);
     // sem_signal(tape_load, N);
     sem_signal_one(queue_sem);      // unlock "mutex"
     return N;

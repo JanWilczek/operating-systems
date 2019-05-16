@@ -5,6 +5,13 @@
     extern "C" {
 #endif
 
+struct queue_entry
+{
+    pid_t loader_id;
+    struct timespec* time_loaded;
+    int package_weight;
+};
+
 #define SEM_TRUCK_READY 1
 #define SEM_TAPE_COUNT 2
 #define SEM_IS_PACKAGE 3

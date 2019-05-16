@@ -1,7 +1,9 @@
 #include <stdlib.h>
+#include <time.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "semaphore.h"
 #include "shared_queue.h"
-#include "shared_resources.h"
 
 void tape_init(int K)
 {
@@ -14,7 +16,15 @@ void tape_put_package(int N)
 {
     semaphore_t* queue_sem = sem_get(SEM_QUEUE);
     sem_wait_one(queue_sem);
-    put_to_queue(N);    // operation on shared memory, synchronized through queue_sem
+
+    struct queue_entry qe;
+    qe.loader_id = getpid();
+    qe.package_weight = N;
+    struct timespec spec;
+    clock_gettime(CLOCK_REALTIME, &spec);
+    qe.time_loaded = &spec;
+
+    put_to_queue(&qe);    // operation on shared memory, synchronized through queue_sem
 
     // if (queue_size() < queue_capacity())
     // {
@@ -26,11 +36,13 @@ void tape_put_package(int N)
     free(queue_sem);
 }
 
-int tape_get_package()
+struct queue_entry* tape_get_package(void)
 {
     semaphore_t* queue_sem = sem_get(SEM_QUEUE);
     sem_wait_one(queue_sem);        // lock "mutex"
-    int N = get_from_queue();   // operation on shared memory, synchronized through queue_sem
+
+    struct queue_entry* qe = malloc(sizeof(struct queue_entry));
+    get_from_queue(qe);   // operation on shared memory, synchronized through queue_sem
 
     semaphore_t* tape_count_tape = sem_get(SEM_TAPE_COUNT);
     sem_signal_one(tape_count_tape);
@@ -39,7 +51,7 @@ int tape_get_package()
     // sem_signal(tape_load, N);
     sem_signal_one(queue_sem);      // unlock "mutex"
     free(queue_sem);
-    return N;
+    return qe;
 }
 
 void tape_close(void)

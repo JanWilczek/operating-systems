@@ -6,7 +6,6 @@
 #include <signal.h>
 #include <time.h>
 #include "shared_queue.h"
-#include "shared_resources.h"
 #include "semaphore.h"
 #include "time_stamp.h"
 
@@ -16,13 +15,6 @@ struct queue_info
     int size;
     int first_id;
     int last_id;
-};
-
-struct queue_entry
-{
-    pid_t loader_id;
-    struct timespec time_loaded;
-    int package_weight;
 };
 
 int queue_size()
@@ -56,7 +48,7 @@ void *get_queue(void)
 
 void queue_init(int size)
 {
-    size_t size_in_bytes = sizeof(struct queue_info) + size * sizeof(int);
+    size_t size_in_bytes = sizeof(struct queue_info) + size * sizeof(struct queue_entry);
     int mem_id = shmget(queue_key(), size_in_bytes /* elements */,
                      0700 | IPC_CREAT | IPC_EXCL);
 
@@ -81,7 +73,7 @@ void queue_init(int size)
     shmdt(memory);
 }
 
-int queue_operation_wrapper(int (*operation)(struct queue_info *, int *, int *), int arg)
+int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_entry *, struct queue_entry*), struct queue_element* arg)
 {
     int result;
 
@@ -102,7 +94,7 @@ int queue_operation_wrapper(int (*operation)(struct queue_info *, int *, int *),
     return result;
 }
 
-int put_to_queue_internal(struct queue_info *qinfo, int *array, int *element)
+int put_to_queue_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
 {
     int new_id = (qinfo->first_id + 1) % qinfo->size;
     if (new_id == qinfo->last_id)
@@ -112,7 +104,7 @@ int put_to_queue_internal(struct queue_info *qinfo, int *array, int *element)
         return -1;
     }
 
-    array[new_id] = *element;
+    memcpy(array + new_id * sizeof(struct queue_entry), element, sizeof(struct queue_entry));
 
     // if no elements were in the queue
     if (qinfo->first_id == -1 && qinfo->last_id == -1)
@@ -124,12 +116,12 @@ int put_to_queue_internal(struct queue_info *qinfo, int *array, int *element)
     return 0;
 }
 
-void put_to_queue(int element)
+void put_to_queue(struct queue_entry* element)
 {
     queue_operation_wrapper(put_to_queue_internal, element);
 }
 
-int get_from_queue_internal(struct queue_info *qinfo, int *array, int *element)
+int get_from_queue_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
 {
     if (qinfo->first_id == -1 && qinfo->last_id == -1)
     {
@@ -138,8 +130,8 @@ int get_from_queue_internal(struct queue_info *qinfo, int *array, int *element)
         return -1;
     }
 
-    int result = array[qinfo->last_id];
-    *element = result;
+    struct queue_entry* qe = malloc(sizeof(struct queue_entry));
+    memcpy(array + qinfo->last_id * sizeof(struct queue_entry), qe, sizeof(struct queue_entry));
 
     if (qinfo->last_id == qinfo->first_id)
     {
@@ -152,15 +144,15 @@ int get_from_queue_internal(struct queue_info *qinfo, int *array, int *element)
         qinfo->last_id = (qinfo->last_id + 1) % qinfo->size;
     }
 
-    return result;
+    return 0;
 }
 
-int get_from_queue(void)
+int get_from_queue(struct queue_entry *element)
 {
-    return queue_operation_wrapper(get_from_queue_internal, 0);
+    return queue_operation_wrapper(get_from_queue_internal, element);
 }
 
-int queue_capacity_internal(struct queue_info *qinfo, int *array, int *element)
+int queue_capacity_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
 {
     return qinfo->size;
 }

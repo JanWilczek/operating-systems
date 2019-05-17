@@ -18,11 +18,12 @@ void tape_put_package(int N)
     sem_wait_one(queue_sem);
 
     struct queue_entry qe;
-    qe.loader_id = getpid();
-    qe.package_weight = N;
     struct timespec spec;
     clock_gettime(CLOCK_REALTIME, &spec);
-    qe.time_loaded = &spec;
+    qe.loader_id = getpid();
+    qe.tv_sec = spec.tv_sec;
+    qe.tv_nsec = spec.tv_nsec;
+    qe.package_weight = N;
 
     put_to_queue(&qe);    // operation on shared memory, synchronized through queue_sem
 

@@ -39,6 +39,8 @@ semaphore_t *sem_init(char proj_id, int initial_value)
     {
         perror("semctl");
     }
+    
+    // TODO: Check if properly initialized 
 
     // Create the wrapper
     semaphore_t *semaphore = malloc(sizeof(semaphore_t));

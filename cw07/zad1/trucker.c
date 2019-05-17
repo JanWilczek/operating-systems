@@ -65,11 +65,11 @@ void trucker_loop(int X)
         struct queue_entry* package = tape_get_package();
         count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
 
-        // TODO: package received message
+        // WIP: package received message
         struct timespec spec;
         clock_gettime(CLOCK_REALTIME, &spec);
-        spec.tv_sec = spec.tv_sec - package->time_loaded->tv_sec;
-        spec.tv_nsec = spec.tv_nsec - package->time_loaded->tv_nsec;
+        spec.tv_sec = spec.tv_sec - package->tv_sec;
+        spec.tv_nsec = spec.tv_nsec - package->tv_nsec;
         char* time_diff_string = format_time(&spec);
         char buffer[300];
         sprintf(buffer, "Received package of weight %d from loader %d.\n"

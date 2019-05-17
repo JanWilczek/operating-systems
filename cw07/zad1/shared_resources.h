@@ -8,7 +8,8 @@
 struct queue_entry
 {
     pid_t loader_id;
-    struct timespec* time_loaded;
+    time_t tv_sec;
+    long tv_nsec;
     int package_weight;
 };
 

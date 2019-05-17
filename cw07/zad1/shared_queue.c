@@ -10,13 +10,22 @@
 #include "semaphore.h"
 #include "time_stamp.h"
 
-
 struct queue_info
 {
     int size;
     int first_id;
     int last_id;
 };
+
+void print_queue(struct queue_info *qinfo, struct queue_entry *array, const char* preamble)
+{
+    printf("%s s%d f%d l%d", preamble, qinfo->size, qinfo->first_id, qinfo->last_id);
+    for (int i = 0; i < qinfo->size; ++i)
+    {
+        printf(" %d", array->package_weight);
+    }
+    printf("\n");
+}
 
 int queue_size()
 {
@@ -51,7 +60,7 @@ void queue_init(int size)
 {
     size_t size_in_bytes = sizeof(struct queue_info) + size * sizeof(struct queue_entry);
     int mem_id = shmget(queue_key(), size_in_bytes /* elements */,
-                     0700 | IPC_CREAT | IPC_EXCL);
+                        0700 | IPC_CREAT | IPC_EXCL);
 
     if (mem_id == -1)
     {
@@ -74,7 +83,7 @@ void queue_init(int size)
     shmdt(memory);
 }
 
-int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_entry *, struct queue_entry*), struct queue_entry* arg)
+int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_entry *, struct queue_entry *), struct queue_entry *arg)
 {
     int result;
 
@@ -82,7 +91,7 @@ int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_e
     if (memory != NULL)
     {
         struct queue_info *qinfo = (struct queue_info *)memory;
-        struct queue_entry * array = memory + sizeof(struct queue_info);
+        struct queue_entry *array = (struct queue_entry *)memory + sizeof(struct queue_info);
 
         result = operation(qinfo, array, arg);
 
@@ -97,6 +106,8 @@ int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_e
 
 int put_to_queue_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
 {
+    print_queue(qinfo, array, "put");
+    
     int new_id = (qinfo->first_id + 1) % qinfo->size;
     if (new_id == qinfo->last_id)
     {
@@ -117,13 +128,15 @@ int put_to_queue_internal(struct queue_info *qinfo, struct queue_entry *array, s
     return 0;
 }
 
-void put_to_queue(struct queue_entry* element)
+void put_to_queue(struct queue_entry *element)
 {
     queue_operation_wrapper(put_to_queue_internal, element);
 }
 
 int get_from_queue_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
 {
+    print_queue(qinfo, array, "get");
+
     if (qinfo->first_id == -1 && qinfo->last_id == -1)
     {
         // Error, the queue is empty

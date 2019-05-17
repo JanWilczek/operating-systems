@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
 /*  SYSTEM V HEADERS    */
 #include <sys/sem.h>
@@ -8,7 +9,7 @@
 
 #include "semaphore.h"
 
-#define PROJ_ID 'a'
+#define SEM_NUM 0
 
 // Copied from man
 union semun {
@@ -18,6 +19,11 @@ union semun {
     struct seminfo *__buf; /* Buffer for IPC_INFO
                                            (Linux-specific) */
 };
+
+int sem_get_val(int semaphore_id)
+{
+    return semctl(semaphore_id, SEM_NUM, GETVAL);
+}
 
 semaphore_t *sem_init(char proj_id, int initial_value)
 {
@@ -35,12 +41,17 @@ semaphore_t *sem_init(char proj_id, int initial_value)
     // Initialize the semaphore with initial_value
     union semun arg;
     arg.val = initial_value;
-    if (semctl(semaphore_id, 0, SETVAL, arg) == -1)
+    if (semctl(semaphore_id, SEM_NUM, SETVAL, arg) == -1)
     {
         perror("semctl");
     }
+    else
+    {
+        // Check if properly initialized 
+        assert(sem_get_val(semaphore_id) == initial_value);
+    }
     
-    // TODO: Check if properly initialized 
+    // printf("Semaphore %d value after initialization %d\n.", semaphore_id, sem_get_val(semaphore_id));
 
     // Create the wrapper
     semaphore_t *semaphore = malloc(sizeof(semaphore_t));
@@ -88,7 +99,7 @@ void sem_wait_one(semaphore_t *semaphore)
 
 void sem_wait(semaphore_t *semaphore, int value)
 {
-    struct sembuf op = {0, - value /* decrease semaphore value by value */, SEM_UNDO};
+    struct sembuf op = {SEM_NUM, - value /* decrease semaphore value by value */, SEM_UNDO};
     struct sembuf ops[1];
     ops[0] = op;
 
@@ -96,6 +107,8 @@ void sem_wait(semaphore_t *semaphore, int value)
     {
         perror("semop (sem_wait)");
     }
+
+    // printf("Semaphore %d value after sem_wait %d\n.", semaphore->id, sem_get_val(semaphore->id));
 }
 
 void sem_signal_one(semaphore_t *semaphore)
@@ -113,4 +126,6 @@ void sem_signal(semaphore_t *semaphore, int value)
     {
         perror("semop (sem_signal)");
     }
+
+    // printf("Semaphore %d value after sem_signal %d\n.", semaphore->id, sem_get_val(semaphore->id));
 }

@@ -12,12 +12,13 @@ semaphore_t *is_package;
 // semaphore_t* tape_load;
 semaphore_t *truck_ready;
 
-void print_usage(const char* program_name)
+void print_usage(const char *program_name)
 {
     fprintf(stderr, "Usage:     %s X K M\n"
                     "   X       number of packages the trucker can load\n"
                     "   K       number of packages the tape can hold\n"
-                    "   M       total mass of packages the tape can hold\n", program_name);
+                    "   M       total mass of packages the tape can hold\n",
+            program_name);
 }
 
 void sigint_handler(int signum)
@@ -48,11 +49,27 @@ void sigint_handler(int signum)
     exit(EXIT_SUCCESS);
 }
 
-void print_message(const char* message)
+void print_message(const char *message)
 {
-    char* time_stamp = get_precise_time();
+    char *time_stamp = get_precise_time();
     printf("%s Trucker: %s\n", time_stamp, message);
     free(time_stamp);
+}
+
+void print_package_received(const struct queue_entry *package, int current_load, int max_load)
+{
+    struct timespec spec;
+    clock_gettime(CLOCK_REALTIME, &spec);
+    spec.tv_sec = spec.tv_sec - package->tv_sec;
+    spec.tv_nsec = abs(spec.tv_nsec - package->tv_nsec);
+    char *time_diff_string = format_time(&spec);
+    char buffer[400];
+    sprintf(buffer, "Received package of weight %d from loader %d.\n"
+                    "           It took %s time for this package to reach the truck.\n"
+                    "           Current load is %d/%d.",
+            package->package_weight, package->loader_id, time_diff_string, current_load, max_load);
+    print_message(buffer);
+    free(time_diff_string);
 }
 
 void trucker_loop(int X)
@@ -61,22 +78,12 @@ void trucker_loop(int X)
     while (1)
     {
         print_message("Truck is waiting for a package.");
-        sem_wait_one(is_package);   // wait for package
-        struct queue_entry* package = tape_get_package();
+        sem_wait_one(is_package); // wait for package
+        struct queue_entry *package = tape_get_package();
         count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
 
         // WIP: package received message
-        struct timespec spec;
-        clock_gettime(CLOCK_REALTIME, &spec);
-        spec.tv_sec = spec.tv_sec - package->tv_sec;
-        spec.tv_nsec = spec.tv_nsec - package->tv_nsec;
-        char* time_diff_string = format_time(&spec);
-        char buffer[300];
-        sprintf(buffer, "Received package of weight %d from loader %d.\n"
-                        "           It took %s time for this package to reach the truck.\n"
-                        "           Current load is %d/%d.", package->package_weight, package->loader_id, time_diff_string, count, X);
-        print_message(buffer);
-        free(time_diff_string);
+        print_package_received(package, count, X);
         free(package);
 
         if (count > X)
@@ -102,7 +109,7 @@ void trucker_loop(int X)
 
 void trucker(int X, int K, int M)
 {
-    truck_ready = sem_init(SEM_TRUCK_READY, X);
+    truck_ready = sem_init(SEM_TRUCK_READY, 1);
     // tape_load = sem_init(SEM_TAPE_LOAD, M);
     tape_count = sem_init(SEM_TAPE_COUNT, K);
     is_package = sem_init(SEM_IS_PACKAGE, 0);
@@ -116,7 +123,7 @@ int main(int argc, char *argv[])
     tape_count = NULL;
     is_package = NULL;
     truck_ready = NULL;
-    
+
     if (argc != 4)
     {
         print_usage(argv[0]);

@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
             char c_string[128];
             sprintf(c_string, "%d", c);
             char* args[] = {"./loader", n_string, c_string, NULL};
-            printf("Started loader with N=%s or %d and C=%s or %d\n", n_string, n, c_string, c);
+            printf("Started loader with N=%s and C=%s\n", n_string, c_string);
             execv(args[0], args);
         }
     }

@@ -106,8 +106,8 @@ int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_e
 
 int put_to_queue_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
 {
-    print_queue(qinfo, array, "put");
-    
+    // print_queue(qinfo, array, "put");
+
     int new_id = (qinfo->first_id + 1) % qinfo->size;
     if (new_id == qinfo->last_id)
     {
@@ -135,7 +135,7 @@ void put_to_queue(struct queue_entry *element)
 
 int get_from_queue_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
 {
-    print_queue(qinfo, array, "get");
+    // print_queue(qinfo, array, "get");
 
     if (qinfo->first_id == -1 && qinfo->last_id == -1)
     {

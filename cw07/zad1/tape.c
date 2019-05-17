@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -43,7 +44,13 @@ struct queue_entry* tape_get_package(void)
     sem_wait_one(queue_sem);        // lock "mutex"
 
     struct queue_entry* qe = malloc(sizeof(struct queue_entry));
-    get_from_queue(qe);   // operation on shared memory, synchronized through queue_sem
+    if (get_from_queue(qe) == -1)   // operation on sha\nred memory, synchronized through queue_sem
+    {
+        // Leave the queue blocked - this should mean end of execution.
+        printf("Tape blocked.\n");
+        free(qe);
+        return NULL;
+    }
 
     semaphore_t* tape_count_tape = sem_get(SEM_TAPE_COUNT);
     sem_signal_one(tape_count_tape);
@@ -57,8 +64,8 @@ struct queue_entry* tape_get_package(void)
 
 void tape_close(void)
 {
-    semaphore_t* queue_sem = sem_get(SEM_QUEUE);
-    sem_wait_one(queue_sem);
+    // semaphore_t* queue_sem = sem_get(SEM_QUEUE);
+    // sem_wait_one(queue_sem);
     sem_remove(queue_sem);
     queue_close();
 }

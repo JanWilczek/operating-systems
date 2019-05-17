@@ -77,7 +77,8 @@ void loader(int N, int C)
 
     if (!truck_ready || !tape_count /* || tape_load*/ || !is_package)
     {
-        fprintf(stderr, "Worker: Could not get semaphores properly. Exiting.\n");
+        fprintf(stderr, "Worker: Could not get semaphores properly. Exiting.\n"
+                        "Hint: Try starting trucker program first.\n");
         raise(SIGINT);
     }
 

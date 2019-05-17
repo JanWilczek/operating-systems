@@ -7,10 +7,14 @@
 #include "shared_resources.h"
 #include "time_stamp.h"
 
+// Global variables
 semaphore_t *tape_count;
 semaphore_t *is_package;
 // semaphore_t* tape_load;
 semaphore_t *truck_ready;
+
+int X;
+int count;
 
 void print_usage(const char *program_name)
 {
@@ -21,29 +25,41 @@ void print_usage(const char *program_name)
             program_name);
 }
 
+void free_resources(void)
+{
+    tape_close();
+
+    if (tape_count)
+    {
+        sem_remove(tape_count);
+        tape_count = NULL;
+    }
+
+    if (is_package)
+    {
+        sem_remove(is_package);
+        is_package = NULL;
+    }
+
+    if (truck_ready)
+    {
+        sem_remove(truck_ready);
+        truck_ready = NULL;
+    }
+}
+
 void sigint_handler(int signum)
 {
     if (signum == SIGINT)
     {
-        tape_close();
-
-        if (tape_count)
+        // Retrieve all remaining packages
+        struct queue_entry *qe;
+        while ((qe = tape_get_package()) != NULL)
         {
-            sem_remove(tape_count);
-            tape_count = NULL;
+            handle_package(qe);
         }
 
-        if (is_package)
-        {
-            sem_remove(is_package);
-            is_package = NULL;
-        }
-
-        if (truck_ready)
-        {
-            sem_remove(truck_ready);
-            truck_ready = NULL;
-        }
+        free_resources();
     }
 
     exit(EXIT_SUCCESS);
@@ -72,35 +88,41 @@ void print_package_received(const struct queue_entry *package, int current_load,
     free(time_diff_string);
 }
 
+void handle_package(struct queue_entry *package)
+{
+    count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
+
+    // Package received message
+    print_package_received(package, count, X);
+
+    if (count > X)
+    {
+        // ERROR
+        fprintf(stderr, "Fatal error: truck overloaded.\n");
+        free_resources();
+        exit(EXIT_FAILURE);
+    }
+
+    if (count == X)
+    {
+        // truck full
+        print_message("End of space. Truck is leaving and unloading.");
+        sleep(2);
+        count = 0;
+        print_message("Empty truck has arrived.");
+    }
+}
+
 void trucker_loop(int X)
 {
-    int count = 0;
+    count = 0;
     while (1)
     {
         print_message("Truck is waiting for a package.");
         sem_wait_one(is_package); // wait for package
         struct queue_entry *package = tape_get_package();
-        count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
-
-        // WIP: package received message
-        print_package_received(package, count, X);
+        handle_package(package);
         free(package);
-
-        if (count > X)
-        {
-            // ERROR
-            fprintf(stderr, "Fatal error: truck overloaded.\n");
-            raise(SIGINT);
-        }
-
-        if (count == X)
-        {
-            // truck full
-            print_message("End of space. Truck is leaving and unloading.");
-            sleep(2);
-            count = 0;
-            print_message("Empty truck has arrived.");
-        }
 
         // Signal that truck is ready for loading
         sem_signal_one(truck_ready);
@@ -130,7 +152,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    int X, K, M;
+    int K, M;
     X = atoi(argv[1]);
     K = atoi(argv[2]);
     M = atoi(argv[3]);

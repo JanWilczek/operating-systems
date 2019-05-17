@@ -61,14 +61,16 @@ void print_package_received(const struct queue_entry *package, int current_load,
     clock_gettime(CLOCK_REALTIME, &spec);
     spec.tv_sec = spec.tv_sec - package->tv_sec;
     spec.tv_nsec = abs(spec.tv_nsec - package->tv_nsec);
-    char *time_diff_string = format_time(&spec);
+    long ms = (long)(spec.tv_nsec / 1e6f) % 1000L;
+    long us = (long)(spec.tv_nsec / 1e3f) % 1000L;
+    // char *time_diff_string = format_time(&spec);
     char buffer[400];
     sprintf(buffer, "Received package of weight %d from loader %d.\n"
-                    "           It took %s time for this package to reach the truck.\n"
+                    "           It took %ld:%ld:%ld time for this package to reach the truck.\n"
                     "           Current load is %d/%d.",
-            package->package_weight, package->loader_id, time_diff_string, current_load, max_load);
+            package->package_weight, package->loader_id, spec.tv_sec, ms, us, current_load, max_load);
     print_message(buffer);
-    free(time_diff_string);
+    // free(time_diff_string);
 }
 
 void handle_package(struct queue_entry *package)

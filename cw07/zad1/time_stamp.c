@@ -13,8 +13,8 @@ char* get_precise_time(void)
 
 char* format_time(struct timespec* spec)
 {
-    long us = spec->tv_nsec / 1e3f;
-    long ms = spec->tv_nsec / 1e6f;
+    long us = (long)(spec->tv_nsec / 1e3f) % 1000L;
+    long ms = (long)(spec->tv_nsec / 1e6f) % 1000L;
 
     char* buffer = malloc(100 * sizeof(char));
     char temp[50];

@@ -48,23 +48,6 @@ void free_resources(void)
     }
 }
 
-void sigint_handler(int signum)
-{
-    if (signum == SIGINT)
-    {
-        // Retrieve all remaining packages
-        struct queue_entry *qe;
-        while ((qe = tape_get_package()) != NULL)
-        {
-            handle_package(qe);
-        }
-
-        free_resources();
-    }
-
-    exit(EXIT_SUCCESS);
-}
-
 void print_message(const char *message)
 {
     char *time_stamp = get_precise_time();
@@ -111,6 +94,31 @@ void handle_package(struct queue_entry *package)
         count = 0;
         print_message("Empty truck has arrived.");
     }
+}
+
+void sigint_handler(int signum)
+{
+    if (signum == SIGINT)
+    {
+        // Retrieve all remaining packages
+        struct queue_entry *qe;
+        while ((qe = tape_get_package()) != NULL)
+        {
+            handle_package(qe);
+        }
+        if (count > 0)
+        {
+            // Report truck's load
+            char buffer[300];
+            sprintf(buffer, "End of program. Truck is leaving and unloading with load %d/%d.\n", count, X);
+            print_message(buffer);
+            count = 0;
+        }
+
+        free_resources();
+    }
+
+    exit(EXIT_SUCCESS);
 }
 
 void trucker_loop(int X)

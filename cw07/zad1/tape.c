@@ -64,7 +64,7 @@ struct queue_entry* tape_get_package(void)
 
 void tape_close(void)
 {
-    // semaphore_t* queue_sem = sem_get(SEM_QUEUE);
+    semaphore_t* queue_sem = sem_get(SEM_QUEUE);
     // sem_wait_one(queue_sem);
     sem_remove(queue_sem);
     queue_close();

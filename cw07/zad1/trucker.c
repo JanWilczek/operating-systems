@@ -5,7 +5,7 @@
 #include "semaphore.h"
 #include "tape.h"
 #include "shared_resources.h"
-#include "time_stamp.h"
+#include "utils.h"
 
 // Global variables
 semaphore_t *tape_count;
@@ -66,7 +66,7 @@ void print_package_received(const struct queue_entry *package, int current_load,
     // char *time_diff_string = format_time(&spec);
     char buffer[400];
     sprintf(buffer, "Received package of weight %d from loader %d.\n"
-                    "           It took %ld:%ld:%ld time for this package to reach the truck.\n"
+                    "           It took %ld:%ld:%ld [s:ms:us] for this package to reach the truck.\n"
                     "           Current load is %d/%d.",
             package->package_weight, package->loader_id, spec.tv_sec, ms, us, current_load, max_load);
     print_message(buffer);

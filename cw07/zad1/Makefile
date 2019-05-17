@@ -8,20 +8,20 @@ test: trucker loader loaders
 loaders: loader loaders.c
 	gcc $(CFLAGS) $(TEMP_FLAGS) loaders.c -o loaders
 
-loader: loader.o semaphore.o tape.o shared_queue.o time_stamp.o
-	gcc $(CFLAGS) $(FLAGS) loader.o semaphore.o tape.o shared_queue.o time_stamp.o -o loader
+loader: loader.o semaphore.o tape.o shared_queue.o utils.o
+	gcc $(CFLAGS) $(FLAGS) loader.o semaphore.o tape.o shared_queue.o utils.o -o loader
 
-loader.o: semaphore.h tape.h time_stamp.h loader.c
+loader.o: semaphore.h tape.h utils.h loader.c
 	gcc $(CFLAGS) $(FLAGS) -c loader.c
 
-trucker: trucker.o semaphore.o tape.o shared_queue.o time_stamp.o
-	gcc $(CFLAGS) $(FLAGS) trucker.o semaphore.o tape.o shared_queue.o time_stamp.o -o trucker
+trucker: trucker.o semaphore.o tape.o shared_queue.o utils.o
+	gcc $(CFLAGS) $(FLAGS) trucker.o semaphore.o tape.o shared_queue.o utils.o -o trucker
 
-trucker.o: semaphore.h tape.h trucker.c time_stamp.h shared_resources.h
+trucker.o: semaphore.h tape.h trucker.c utils.h shared_resources.h
 	gcc $(CFLAGS) $(FLAGS) -c trucker.c
 
-time_stamp.o: time_stamp.h time_stamp.c
-	gcc $(CFLAGS) $(FLAGS) -c time_stamp.c
+utils.o: utils.h utils.c
+	gcc $(CFLAGS) $(FLAGS) -c utils.c
 
 tape.o: tape.c tape.h semaphore.h shared_queue.h shared_resources.h
 	gcc $(CFLAGS) $(FLAGS) -c tape.c

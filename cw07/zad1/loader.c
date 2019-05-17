@@ -6,7 +6,7 @@
 #include "semaphore.h"
 #include "tape.h"
 #include "shared_resources.h"
-#include "time_stamp.h"
+#include "utils.h"
 
 semaphore_t* truck_ready;
 semaphore_t* tape_count;

@@ -27,11 +27,6 @@ void print_queue(struct queue_info *qinfo, struct queue_entry *array, const char
     printf("\n");
 }
 
-int queue_size()
-{
-    return 0;
-}
-
 key_t queue_key(void)
 {
     return ftok(getenv("HOME"), SHM_QUEUE);
@@ -164,6 +159,23 @@ int get_from_queue_internal(struct queue_info *qinfo, struct queue_entry *array,
 int get_from_queue(struct queue_entry *element)
 {
     return queue_operation_wrapper(get_from_queue_internal, element);
+}
+
+int queue_size_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
+{
+    if (qinfo->first_id >= qinfo->last_id)
+    {
+        return qinfo->first_id - qinfo->last_id + 1;
+    }
+    else
+    {
+        return qinfo->size - (qinfo->last_id - qinfo->first_id) + 1;        
+    }
+}
+
+int queue_size(void)
+{
+    return queue_operation_wrapper(queue_size_internal, 0);
 }
 
 int queue_capacity_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)

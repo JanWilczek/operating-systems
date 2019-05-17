@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "time_stamp.h"
+#include "utils.h"
 
 
 char* get_precise_time(void)

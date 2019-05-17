@@ -8,7 +8,7 @@
 
 void print_usage(const char* program_name)
 {
-    fprintf(stderr, "Usage:     %s X K M\n"
+    fprintf(stderr, "Usage:     %s L N\n"
                     "   L       number of loaders to start\n"
                     "   N       maximum weight of package a loader can give\n", program_name);
 }

@@ -21,11 +21,11 @@ void print_usage(const char* program_name)
                     "           argument means an infinite number of packages\n", program_name);
 }
 
-void print_message(const char* message)
+void print_loader_message(const char* message)
 {
-    char* time_stamp = get_precise_time();
-    printf("%s Loader %d: %s\n", time_stamp, getpid(), message);
-    free(time_stamp);
+    char buffer[100];
+    sprintf(buffer, "Loader %d:", getpid());
+    print_message(message, buffer);
 }
 
 void sigint_handler(int signum)
@@ -59,13 +59,13 @@ void loader_loop(int N)
 {
     sem_wait_one(truck_ready);      // wait for trucker to be available
     // sem_wait(tapeLoad, N);       // wait for sufficiently small tape load
-    print_message("Waiting for a place on the tape.");
+    print_loader_message("Waiting for a place on the tape.");
     sem_wait_one(tape_count);       // wait for spot on the tape
     tape_put_package(N);
     sem_signal_one(is_package);     // signal that there is package
     char buffer[100];
     sprintf(buffer, "Put package of weight %d on the tape.", N);
-    print_message(buffer);
+    print_loader_message(buffer);
 }
 
 void loader(int N, int C)

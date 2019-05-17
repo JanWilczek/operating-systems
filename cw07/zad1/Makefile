@@ -23,7 +23,7 @@ trucker.o: semaphore.h tape.h trucker.c utils.h shared_resources.h
 utils.o: utils.h utils.c
 	gcc $(CFLAGS) $(FLAGS) -c utils.c
 
-tape.o: tape.c tape.h semaphore.h shared_queue.h shared_resources.h
+tape.o: tape.c tape.h semaphore.h shared_queue.h shared_resources.h utils.h
 	gcc $(CFLAGS) $(FLAGS) -c tape.c
 
 semaphore.o: semaphore.h semaphore.c

@@ -48,13 +48,6 @@ void free_resources(void)
     }
 }
 
-void print_message(const char *message)
-{
-    char *time_stamp = get_precise_time();
-    printf("%s Trucker: %s\n", time_stamp, message);
-    free(time_stamp);
-}
-
 void print_package_received(const struct queue_entry *package, int current_load, int max_load)
 {
     struct timespec spec;
@@ -69,7 +62,7 @@ void print_package_received(const struct queue_entry *package, int current_load,
                     "           It took %ld:%ld:%ld [s:ms:us] for this package to reach the truck.\n"
                     "           Current load is %d/%d.",
             package->package_weight, package->loader_id, spec.tv_sec, ms, us, current_load, max_load);
-    print_message(buffer);
+    print_message(buffer, "Trucker:");
     // free(time_diff_string);
 }
 
@@ -91,10 +84,10 @@ void handle_package(struct queue_entry *package)
     if (count == X)
     {
         // truck full
-        print_message("End of space. Truck is leaving and unloading.");
+        print_message("End of space. Truck is leaving and unloading.", "Trucker:");
         sleep(2);
         count = 0;
-        print_message("Empty truck has arrived.");
+        print_message("Empty truck has arrived.", "Trucker:");
     }
 }
 
@@ -113,7 +106,7 @@ void sigint_handler(int signum)
             // Report truck's load
             char buffer[300];
             sprintf(buffer, "End of program. Truck is leaving and unloading with load %d/%d.\n", count, X);
-            print_message(buffer);
+            print_message(buffer, "Trucker:");
             count = 0;
         }
 
@@ -128,7 +121,7 @@ void trucker_loop(int X)
     count = 0;
     while (1)
     {
-        print_message("Truck is waiting for a package.");
+        print_message("Truck is waiting for a package.", "Trucker:");
         sem_wait_one(is_package); // wait for package
         struct queue_entry *package = tape_get_package();
         handle_package(package);

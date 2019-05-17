@@ -5,6 +5,14 @@
 #include <unistd.h>
 #include "semaphore.h"
 #include "shared_queue.h"
+#include "utils.h"
+
+void print_tape_message(const char* message)
+{
+    char buffer[200];
+    sprintf(buffer, "Current load: %d/%d", queue_size(), queue_capacity());
+    print_message(buffer, message); // preamble and message are switched on purpose, to print the load information last.
+}
 
 void tape_init(int K)
 {
@@ -36,6 +44,8 @@ void tape_put_package(int N)
     sem_signal_one(queue_sem);
     // sem_signal_one(is_package);
     free(queue_sem);
+
+    print_tape_message("Package put on tape.");
 }
 
 struct queue_entry* tape_get_package(void)
@@ -59,6 +69,9 @@ struct queue_entry* tape_get_package(void)
     // sem_signal(tape_load, N);
     sem_signal_one(queue_sem);      // unlock "mutex"
     free(queue_sem);
+
+    print_tape_message("Package taken from tape.");
+
     return qe;
 }
 

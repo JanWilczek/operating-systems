@@ -13,6 +13,7 @@
 struct queue_info
 {
     int size;
+    int max_units;
     int first_id;
     int last_id;
 };
@@ -51,7 +52,7 @@ void *get_queue(void)
     return memory;
 }
 
-void queue_init(int size)
+void queue_init(int size, int max_units)
 {
     size_t size_in_bytes = sizeof(struct queue_info) + size * sizeof(struct queue_entry);
     int mem_id = shmget(queue_key(), size_in_bytes /* elements */,
@@ -72,6 +73,7 @@ void queue_init(int size)
 
     struct queue_info *qinfo = (struct queue_info *)memory;
     qinfo->size = size;
+    qinfo->max_units = max_units;
     qinfo->first_id = -1;
     qinfo->last_id = -1;
 
@@ -163,7 +165,11 @@ int get_from_queue(struct queue_entry *element)
 
 int queue_size_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
 {
-    if (qinfo->first_id >= qinfo->last_id)
+    if (qinfo->first_id == -1 && qinfo->last_id == -1)
+    {
+        return 0;
+    }
+    else if (qinfo->first_id >= qinfo->last_id)
     {
         return qinfo->first_id - qinfo->last_id + 1;
     }
@@ -188,9 +194,39 @@ int queue_capacity(void)
     return queue_operation_wrapper(queue_capacity_internal, 0);
 }
 
+int queue_max_units_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
+{
+    return qinfo->max_units;
+}
+
+int queue_max_units(void)
+{
+    return queue_operation_wrapper(queue_max_units_internal, NULL);
+}
+
+int queue_units_sum_internal(struct queue_info *qinfo, struct queue_entry *array, struct queue_entry *element)
+{
+    if (queue_size() == 0)
+    {
+        return 0;
+    }
+
+    int i = qinfo->first_id;
+    int units_sum = 0;
+
+    do
+    {
+        struct queue_entry* entry = array + i * sizeof(struct queue_entry);
+        units_sum += entry->package_weight;
+        i = (i + 1) % qinfo->size;
+    } while (i != qinfo->last_id + 1);
+    
+    return units_sum;
+}
+
 int queue_units_sum(void)
 {
-    return -1;
+    return queue_operation_wrapper(queue_units_sum_internal, NULL);
 }
 
 void queue_close(void)

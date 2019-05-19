@@ -3,6 +3,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <signal.h>
 #include "semaphore.h"
 #include "shared_queue.h"
 #include "utils.h"
@@ -10,15 +11,15 @@
 void print_tape_message(const char* message)
 {
     char buffer[200];
-    sprintf(buffer, "Current load: %d/%d (%d units).", queue_size(), queue_capacity(), queue_units_sum());
+    sprintf(buffer, "Current load: %d/%d (%d/%d units).", queue_size(), queue_capacity(), queue_units_sum(), queue_max_units());
     print_message(buffer, message); // preamble and message are switched on purpose, to print the load information last.
 }
 
-void tape_init(int K)
+void tape_init(int K, int M)
 {
     semaphore_t* queue_sem = sem_init(SEM_QUEUE, 1);
     free(queue_sem);
-    queue_init(K);
+    queue_init(K, M);
 }
 
 void tape_put_package(int N)
@@ -37,6 +38,14 @@ void tape_put_package(int N)
     put_to_queue(&qe);    // operation on shared memory, synchronized through queue_sem
 
     print_tape_message("Package put on tape."); // This has to be synchronized to be true
+
+    if (queue_units_sum() > queue_max_units())
+    {
+        // ERROR
+        fprintf(stderr, "Fatal error: Too many units on tape.\n");
+        sem_signal_one(queue_sem);
+        kill(getppid(), SIGINT);
+    }
 
     sem_signal_one(queue_sem);
     free(queue_sem);
@@ -61,10 +70,8 @@ struct queue_entry* tape_get_package(void)
     free(tape_count_tape);
 
     print_tape_message("Package taken from tape."); // This has to be synchronized to be true
-    // sem_signal(tape_load, N);
     sem_signal_one(queue_sem);      // unlock "mutex"
     free(queue_sem);
-
 
     return qe;
 }

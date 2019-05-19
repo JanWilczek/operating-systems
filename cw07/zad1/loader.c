@@ -17,7 +17,7 @@ void print_usage(const char* program_name)
 {
     fprintf(stderr, "Usage:     %s N [C]\n"
                     "   N       weight of the packages from this laoder\n"
-                    "   C       number of packages to give (0 or lack of"
+                    "   C       number of packages to give (0 or lack of\n"
                     "           argument means an infinite number of packages\n", program_name);
 }
 
@@ -42,10 +42,12 @@ void sigint_handler(int signum)
         tape_count = NULL;
     }
 
-    // if (tape_load)
-    // {
+    if (tape_load)
+    {
+        free(tape_load);
+        tape_load = NULL;
+    }
 
-    // }
     if (is_package)
     {
         free(is_package);
@@ -57,12 +59,15 @@ void sigint_handler(int signum)
 
 void loader_loop(int N)
 {
-    sem_wait_one(truck_ready);      // wait for trucker to be available
     sem_wait(tape_load, N);       // wait for sufficiently small tape load
     print_loader_message("Waiting for a place on the tape.");
     sem_wait_one(tape_count);       // wait for spot on the tape
+    sem_wait_one(truck_ready);      // wait for trucker to be available
+
     tape_put_package(N);
+
     sem_signal_one(is_package);     // signal that there is a package
+    
     char buffer[100];
     sprintf(buffer, "Put package of weight %d on the tape.", N);
     print_loader_message(buffer);
@@ -75,7 +80,7 @@ void loader(int N, int C)
     tape_load = sem_get(SEM_TAPE_LOAD);
     is_package = sem_get(SEM_IS_PACKAGE);
 
-    if (!truck_ready || !tape_count /* || tape_load*/ || !is_package)
+    if (!truck_ready || !tape_count || !tape_load || !is_package)
     {
         fprintf(stderr, "Worker: Could not get semaphores properly. Exiting.\n"
                         "Hint: Try starting trucker program first.\n");

@@ -27,8 +27,6 @@ void print_usage(const char *program_name)
 
 void free_resources(void)
 {
-    tape_close();
-
     if (tape_count)
     {
         sem_remove(tape_count);
@@ -41,11 +39,19 @@ void free_resources(void)
         is_package = NULL;
     }
 
+    if (tape_load)
+    {
+        sem_remove(tape_load);
+        tape_load = NULL;
+    }
+
     if (truck_ready)
     {
         sem_remove(truck_ready);
         truck_ready = NULL;
     }
+
+    tape_close();
 }
 
 void print_package_received(const struct queue_entry *package, int current_load, int max_load)
@@ -56,14 +62,12 @@ void print_package_received(const struct queue_entry *package, int current_load,
     spec.tv_nsec = abs(spec.tv_nsec - package->tv_nsec);
     long ms = (long)(spec.tv_nsec / 1e6f) % 1000L;
     long us = (long)(spec.tv_nsec / 1e3f) % 1000L;
-    // char *time_diff_string = format_time(&spec);
     char buffer[400];
     sprintf(buffer, "Received package of weight %d from loader %d.\n"
                     "           It took %ld:%ld:%ld [s:ms:us] for this package to reach the truck.\n"
                     "           Current load is %d/%d.",
             package->package_weight, package->loader_id, spec.tv_sec, ms, us, current_load, max_load);
     print_message(buffer, "Trucker:");
-    // free(time_diff_string);
 }
 
 void handle_package(struct queue_entry *package)
@@ -141,7 +145,13 @@ void trucker(int X, int K, int M)
     tape_count = sem_init(SEM_TAPE_COUNT, K);
     is_package = sem_init(SEM_IS_PACKAGE, 0);
 
-    tape_init(K);
+    if (!truck_ready || !tape_count || !tape_load || !is_package)
+    {
+        fprintf(stderr, "Worker: Could not get semaphores properly. Exiting.\n");
+        raise(SIGINT);
+    }
+
+    tape_init(K, M);
     trucker_loop(X);
 }
 

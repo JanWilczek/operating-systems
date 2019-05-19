@@ -10,7 +10,7 @@
 // Global variables
 semaphore_t *tape_count;
 semaphore_t *is_package;
-// semaphore_t* tape_load;
+semaphore_t* tape_load;
 semaphore_t *truck_ready;
 
 int X;
@@ -68,8 +68,10 @@ void print_package_received(const struct queue_entry *package, int current_load,
 
 void handle_package(struct queue_entry *package)
 {
-    count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
+    sem_signal(tape_load, package->package_weight);
 
+    count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
+    
     // Package received message
     print_package_received(package, count, X);
 
@@ -135,7 +137,7 @@ void trucker_loop(int X)
 void trucker(int X, int K, int M)
 {
     truck_ready = sem_init(SEM_TRUCK_READY, 1);
-    // tape_load = sem_init(SEM_TAPE_LOAD, M);
+    tape_load = sem_init(SEM_TAPE_LOAD, M);
     tape_count = sem_init(SEM_TAPE_COUNT, K);
     is_package = sem_init(SEM_IS_PACKAGE, 0);
 

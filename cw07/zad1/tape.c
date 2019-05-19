@@ -10,7 +10,7 @@
 void print_tape_message(const char* message)
 {
     char buffer[200];
-    sprintf(buffer, "Current load: %d/%d", queue_size(), queue_capacity());
+    sprintf(buffer, "Current load: %d/%d (%d units).", queue_size(), queue_capacity(), queue_units_sum());
     print_message(buffer, message); // preamble and message are switched on purpose, to print the load information last.
 }
 

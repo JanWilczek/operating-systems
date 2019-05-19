@@ -11,6 +11,7 @@ extern void put_to_queue(struct queue_entry* element);
 extern int get_from_queue(struct queue_entry * element);
 extern int queue_capacity(void);
 extern int queue_size(void);
+extern int queue_units_sum(void);
 extern void queue_close(void);
 
 #ifdef __cplusplus

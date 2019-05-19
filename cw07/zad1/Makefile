@@ -29,7 +29,7 @@ tape.o: tape.c tape.h semaphore.h shared_queue.h shared_resources.h utils.h
 semaphore.o: semaphore.h semaphore.c
 	gcc $(CFLAGS) $(FLAGS) -c semaphore.c
 
-shared_queue.o: shared_queue.h shared_queue.c shared_resources.h
+shared_queue.o: shared_queue.h shared_queue.c shared_resources.h utils.h
 	gcc $(CFLAGS) $(FLAGS) -c shared_queue.c
 
 clean:

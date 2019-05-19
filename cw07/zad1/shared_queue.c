@@ -8,7 +8,7 @@
 #include <string.h>
 #include "shared_queue.h"
 #include "semaphore.h"
-#include "time_stamp.h"
+#include "utils.h"
 
 struct queue_info
 {
@@ -186,6 +186,11 @@ int queue_capacity_internal(struct queue_info *qinfo, struct queue_entry *array,
 int queue_capacity(void)
 {
     return queue_operation_wrapper(queue_capacity_internal, 0);
+}
+
+int queue_units_sum(void)
+{
+    return -1;
 }
 
 void queue_close(void)

@@ -36,16 +36,10 @@ void tape_put_package(int N)
 
     put_to_queue(&qe);    // operation on shared memory, synchronized through queue_sem
 
-    // if (queue_size() < queue_capacity())
-    // {
-    //     sem_signal_one(tape_count);
-    // }
+    print_tape_message("Package put on tape."); // This has to be synchronized to be true
 
     sem_signal_one(queue_sem);
-    // sem_signal_one(is_package);
     free(queue_sem);
-
-    print_tape_message("Package put on tape.");
 }
 
 struct queue_entry* tape_get_package(void)
@@ -66,11 +60,11 @@ struct queue_entry* tape_get_package(void)
     sem_signal_one(tape_count_tape);
     free(tape_count_tape);
 
+    print_tape_message("Package taken from tape."); // This has to be synchronized to be true
     // sem_signal(tape_load, N);
     sem_signal_one(queue_sem);      // unlock "mutex"
     free(queue_sem);
 
-    print_tape_message("Package taken from tape.");
 
     return qe;
 }

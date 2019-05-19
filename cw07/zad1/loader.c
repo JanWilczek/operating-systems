@@ -62,7 +62,7 @@ void loader_loop(int N)
     print_loader_message("Waiting for a place on the tape.");
     sem_wait_one(tape_count);       // wait for spot on the tape
     tape_put_package(N);
-    sem_signal_one(is_package);     // signal that there is package
+    sem_signal_one(is_package);     // signal that there is a package
     char buffer[100];
     sprintf(buffer, "Put package of weight %d on the tape.", N);
     print_loader_message(buffer);

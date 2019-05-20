@@ -59,12 +59,21 @@ void sigint_handler(int signum)
 
 void loader_loop(int N)
 {
-    sem_wait(tape_load, N);       // wait for sufficiently small tape load
+    // sem_wait(tape_load, N);       // wait for sufficiently small tape load
     print_loader_message("Waiting for a place on the tape.");
     sem_wait_one(tape_count);       // wait for spot on the tape
     sem_wait_one(truck_ready);      // wait for trucker to be available
 
-    tape_put_package(N);
+    int err = 0;
+    while ((err = tape_put_package(N)) != 0)
+    {
+        if (err == -2)
+        {
+            sem_signal_one(tape_count);
+            sem_signal_one(truck_ready);
+            raise(SIGINT);
+        }
+    }
 
     sem_signal_one(is_package);     // signal that there is a package
     

@@ -72,7 +72,7 @@ void print_package_received(const struct queue_entry *package, int current_load,
 
 void handle_package(struct queue_entry *package)
 {
-    sem_signal(tape_load, package->package_weight);
+    // sem_signal(tape_load, package->package_weight);
 
     count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
     

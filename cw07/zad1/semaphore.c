@@ -99,7 +99,7 @@ void sem_wait_one(semaphore_t *semaphore)
 
 void sem_wait(semaphore_t *semaphore, int value)
 {
-    struct sembuf op = {SEM_NUM, - value /* decrease semaphore value by value */, SEM_UNDO};
+    struct sembuf op = {SEM_NUM, - value /* decrease semaphore value by value */, 0};
     struct sembuf ops[1];
     ops[0] = op;
 
@@ -118,7 +118,7 @@ void sem_signal_one(semaphore_t *semaphore)
 
 void sem_signal(semaphore_t *semaphore, int value)
 {
-    struct sembuf op = {0, value /* increase semaphore value by value */, SEM_UNDO};
+    struct sembuf op = {0, value /* increase semaphore value by value */, 0};
     struct sembuf ops[1];
     ops[0] = op;
 

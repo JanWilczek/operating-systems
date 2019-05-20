@@ -20,9 +20,12 @@ void tape_init(int K, int M)
     semaphore_t* queue_sem = sem_init(SEM_QUEUE, 1);
     free(queue_sem);
     queue_init(K, M);
+
+    semaphore_t* queue_tail_sem = sem_init(SEM_QUEUE_TAIL, 1);
+    free(queue_tail_sem);
 }
 
-void tape_put_package(int N)
+int tape_put_package(int N)
 {
     semaphore_t* queue_sem = sem_get(SEM_QUEUE);
     sem_wait_one(queue_sem);
@@ -35,6 +38,23 @@ void tape_put_package(int N)
     qe.tv_nsec = spec.tv_nsec;
     qe.package_weight = N;
 
+    if (queue_max_units() < N)
+    {
+        // Initialization error
+        fprintf(stderr, "Loader's packages are too heavy to be put on tape. Exiting.\n");
+        sem_signal_one(queue_sem);
+        free(queue_sem);
+        return -2;
+    }
+
+    // Check for available units on the tape
+    if (queue_max_units() - queue_units_sum() < N)
+    {
+        sem_signal_one(queue_sem);
+        free(queue_sem);
+        return -1;
+    }
+
     put_to_queue(&qe);    // operation on shared memory, synchronized through queue_sem
 
     print_tape_message("Package put on tape."); // This has to be synchronized to be true
@@ -43,14 +63,12 @@ void tape_put_package(int N)
     {
         // ERROR
         fprintf(stderr, "Fatal error: Too many units on tape.\n");
-        sem_signal_one(queue_sem);
-        // kill(getppid(), SIGINT);
-        // raise(SIGINT);
-        kill(0, SIGINT);
+        kill(0, SIGINT);    // Send SIGINT to all loaders.
     }
 
     sem_signal_one(queue_sem);
     free(queue_sem);
+    return 0;
 }
 
 struct queue_entry* tape_get_package(void)
@@ -84,4 +102,7 @@ void tape_close(void)
     // sem_wait_one(queue_sem);
     sem_remove(queue_sem);
     queue_close();
+
+    semaphore_t* queue_sem_tail = sem_get(SEM_QUEUE_TAIL);
+    sem_remove(queue_sem_tail);
 }

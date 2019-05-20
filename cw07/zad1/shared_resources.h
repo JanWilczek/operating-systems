@@ -19,6 +19,7 @@ struct queue_entry
 #define SEM_TAPE_LOAD 4
 #define SEM_QUEUE 5
 #define SHM_QUEUE 6
+#define SEM_QUEUE_TAIL 7
 
 
 #ifdef __cplusplus

@@ -44,7 +44,9 @@ void tape_put_package(int N)
         // ERROR
         fprintf(stderr, "Fatal error: Too many units on tape.\n");
         sem_signal_one(queue_sem);
-        kill(getppid(), SIGINT);
+        // kill(getppid(), SIGINT);
+        // raise(SIGINT);
+        kill(0, SIGINT);
     }
 
     sem_signal_one(queue_sem);

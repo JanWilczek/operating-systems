@@ -27,10 +27,10 @@ tape.o: tape.c tape.h semaphore.h shared_queue.h shared_resources.h utils.h
 	gcc $(CFLAGS) $(FLAGS) -c tape.c
 
 semaphore.o: semaphore.h semaphore.c
-	gcc $(CFLAGS) $(FLAGS) -c semaphore.c
+	gcc $(CFLAGS) $(FLAGS) -c semaphore.c -lrt
 
 shared_queue.o: shared_queue.h shared_queue.c shared_resources.h utils.h
-	gcc $(CFLAGS) $(FLAGS) -c shared_queue.c
+	gcc $(CFLAGS) $(FLAGS) -c shared_queue.c -lrt
 
 clean:
 	rm *.o trucker loader loaders

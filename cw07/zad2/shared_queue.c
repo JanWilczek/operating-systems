@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/shm.h>
 #include <sys/ipc.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <time.h>
@@ -28,14 +30,9 @@ void print_queue(struct queue_info *qinfo, struct queue_entry *array, const char
     printf("\n");
 }
 
-key_t queue_key(void)
-{
-    return ftok(getenv("HOME"), SHM_QUEUE);
-}
-
 void *get_queue(void)
 {
-    int queue_id = shmget(queue_key(), 0, 0);
+    int queue_id = shm_open(SHM_QUEUE, 0, 0);
     if (queue_id == -1)
     {
         perror("shmget");
@@ -55,8 +52,7 @@ void *get_queue(void)
 void queue_init(int size, int max_units)
 {
     size_t size_in_bytes = sizeof(struct queue_info) + size * sizeof(struct queue_entry);
-    int mem_id = shmget(queue_key(), size_in_bytes /* elements */,
-                        0700 | IPC_CREAT | IPC_EXCL);
+    int mem_id = shm_open(SHM_QUEUE, O_CREAT | O_EXCL | O_RDWR, 0700);
 
     if (mem_id == -1)
     {
@@ -64,7 +60,8 @@ void queue_init(int size, int max_units)
         raise(SIGINT);
     }
 
-    void *memory = shmat(mem_id, NULL, 0);
+    ftruncate(mem_id, size_in_bytes);
+    // TODO from here
     if (memory == (void *)-1)
     {
         perror("shmat");

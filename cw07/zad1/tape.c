@@ -20,9 +20,6 @@ void tape_init(int K, int M)
     semaphore_t* queue_sem = sem_init(SEM_QUEUE, 1);
     free(queue_sem);
     queue_init(K, M);
-
-    semaphore_t* queue_tail_sem = sem_init(SEM_QUEUE_TAIL, 1);
-    free(queue_tail_sem);
 }
 
 int tape_put_package(int N)
@@ -99,10 +96,6 @@ struct queue_entry* tape_get_package(void)
 void tape_close(void)
 {
     semaphore_t* queue_sem = sem_get(SEM_QUEUE);
-    // sem_wait_one(queue_sem);
     sem_remove(queue_sem);
     queue_close();
-
-    semaphore_t* queue_sem_tail = sem_get(SEM_QUEUE_TAIL);
-    sem_remove(queue_sem_tail);
 }

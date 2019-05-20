@@ -10,7 +10,6 @@
 
 semaphore_t* truck_ready;
 semaphore_t* tape_count;
-semaphore_t* tape_load;
 semaphore_t* is_package;
 
 void print_usage(const char* program_name)
@@ -42,12 +41,6 @@ void sigint_handler(int signum)
         tape_count = NULL;
     }
 
-    if (tape_load)
-    {
-        free(tape_load);
-        tape_load = NULL;
-    }
-
     if (is_package)
     {
         free(is_package);
@@ -59,7 +52,6 @@ void sigint_handler(int signum)
 
 void loader_loop(int N)
 {
-    // sem_wait(tape_load, N);       // wait for sufficiently small tape load
     print_loader_message("Waiting for a place on the tape.");
     sem_wait_one(tape_count);       // wait for spot on the tape
     sem_wait_one(truck_ready);      // wait for trucker to be available
@@ -86,10 +78,9 @@ void loader(int N, int C)
 {
     truck_ready = sem_get(SEM_TRUCK_READY);
     tape_count = sem_get(SEM_TAPE_COUNT);
-    tape_load = sem_get(SEM_TAPE_LOAD);
     is_package = sem_get(SEM_IS_PACKAGE);
 
-    if (!truck_ready || !tape_count || !tape_load || !is_package)
+    if (!truck_ready || !tape_count || !is_package)
     {
         fprintf(stderr, "Worker: Could not get semaphores properly. Exiting.\n"
                         "Hint: Try starting trucker program first.\n");

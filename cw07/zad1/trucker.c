@@ -10,7 +10,6 @@
 // Global variables
 semaphore_t *tape_count;
 semaphore_t *is_package;
-semaphore_t* tape_load;
 semaphore_t *truck_ready;
 
 int X;
@@ -37,12 +36,6 @@ void free_resources(void)
     {
         sem_remove(is_package);
         is_package = NULL;
-    }
-
-    if (tape_load)
-    {
-        sem_remove(tape_load);
-        tape_load = NULL;
     }
 
     if (truck_ready)
@@ -72,9 +65,7 @@ void print_package_received(const struct queue_entry *package, int current_load,
 
 void handle_package(struct queue_entry *package)
 {
-    // sem_signal(tape_load, package->package_weight);
-
-    count++; // if X means mass then it should be `count += package_mass`. We assume that X stands for package count.
+    count++; // increase the number of received packages
     
     // Package received message
     print_package_received(package, count, X);
@@ -141,11 +132,10 @@ void trucker_loop(int X)
 void trucker(int X, int K, int M)
 {
     truck_ready = sem_init(SEM_TRUCK_READY, 1);
-    tape_load = sem_init(SEM_TAPE_LOAD, M);
     tape_count = sem_init(SEM_TAPE_COUNT, K);
     is_package = sem_init(SEM_IS_PACKAGE, 0);
 
-    if (!truck_ready || !tape_count || !tape_load || !is_package)
+    if (!truck_ready || !tape_count || !is_package)
     {
         fprintf(stderr, "Worker: Could not get semaphores properly. Exiting.\n");
         raise(SIGINT);

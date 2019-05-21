@@ -18,6 +18,7 @@ struct queue_entry
 #define SEM_IS_PACKAGE 3
 #define SEM_QUEUE 5
 #define SHM_QUEUE "/SHM_QUEUE"
+#define MAX_SHM_SIZE 4096
 
 
 #ifdef __cplusplus

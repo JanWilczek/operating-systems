@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/ipc.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -32,17 +31,17 @@ void print_queue(struct queue_info *qinfo, struct queue_entry *array, const char
 
 void *get_queue(void)
 {
-    int queue_id = shm_open(SHM_QUEUE, 0, 0);
+    int queue_id = shm_open(SHM_QUEUE, O_RDWR, 0);
     if (queue_id == -1)
     {
         perror("shmget");
         return NULL;
     }
 
-    void *memory = shmat(queue_id, NULL, 0);
+    void *memory = mmap(NULL, MAX_SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, queue_id, 0);
     if (memory == (void *)-1)
     {
-        perror("shmat");
+        perror("mmap");
         return NULL;
     }
 
@@ -52,19 +51,30 @@ void *get_queue(void)
 void queue_init(int size, int max_units)
 {
     size_t size_in_bytes = sizeof(struct queue_info) + size * sizeof(struct queue_entry);
+    if (size_in_bytes > MAX_SHM_SIZE)
+    {
+        fprintf(stderr, "Requested queue size too big. Exiting.\n");
+        raise(SIGINT);
+    }
+
     int mem_id = shm_open(SHM_QUEUE, O_CREAT | O_EXCL | O_RDWR, 0700);
 
     if (mem_id == -1)
     {
-        perror("shmget");
+        perror("shm_open");
         raise(SIGINT);
     }
 
-    ftruncate(mem_id, size_in_bytes);
-    // TODO from here
+    if (ftruncate(mem_id, MAX_SHM_SIZE) == -1)
+    {
+        perror("ftruncate");
+        raise(SIGINT);
+    }
+
+    void* memory = mmap(NULL, MAX_SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, mem_id, 0);
     if (memory == (void *)-1)
     {
-        perror("shmat");
+        perror("mmap");
         raise(SIGINT);
     }
 
@@ -74,7 +84,10 @@ void queue_init(int size, int max_units)
     qinfo->first_id = -1;
     qinfo->last_id = -1;
 
-    shmdt(memory);
+    if (munmap(memory, MAX_SHM_SIZE) == -1)
+    {
+        perror("munmap");
+    }
 }
 
 int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_entry *, struct queue_entry *), struct queue_entry *arg)
@@ -89,9 +102,9 @@ int queue_operation_wrapper(int (*operation)(struct queue_info *, struct queue_e
 
         result = operation(qinfo, array, arg);
 
-        if (shmdt(memory) == -1)
+        if (munmap(memory, MAX_SHM_SIZE) == -1)
         {
-            perror("shmdt");
+            perror("munmap");
         }
     }
 

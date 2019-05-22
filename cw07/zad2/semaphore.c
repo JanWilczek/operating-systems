@@ -81,20 +81,6 @@ void sem_wait_one(semaphore_t *semaphore)
     }
 }
 
-// void sem_wait(semaphore_t *semaphore, int value)
-// {
-//     struct sembuf op = {SEM_NUM, - value /* decrease semaphore value by value */, 0};
-//     struct sembuf ops[1];
-//     ops[0] = op;
-
-//     if (semop(semaphore->id, ops, 1) == -1)
-//     {
-//         perror("semop (sem_wait)");
-//     }
-
-//     // printf("Semaphore %d value after sem_wait %d\n.", semaphore->id, sem_get_val(semaphore->id));
-// }
-
 void sem_signal_one(semaphore_t *semaphore)
 {
     if (sem_post(semaphore) == -1)
@@ -102,17 +88,3 @@ void sem_signal_one(semaphore_t *semaphore)
         perror("sem_post");
     }
 }
-
-// void sem_signal(semaphore_t *semaphore, int value)
-// {
-//     struct sembuf op = {0, value /* increase semaphore value by value */, 0};
-//     struct sembuf ops[1];
-//     ops[0] = op;
-
-//     if (semop(semaphore->id, ops, 1) == -1)
-//     {
-//         perror("semop (sem_signal)");
-//     }
-
-//     // printf("Semaphore %d value after sem_signal %d\n.", semaphore->id, sem_get_val(semaphore->id));
-// }

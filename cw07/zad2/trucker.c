@@ -102,7 +102,7 @@ void sigint_handler(int signum)
         {
             // Report truck's load
             char buffer[300];
-            sprintf(buffer, "End of program. Truck is leaving and unloading with load %d/%d.\n", count, X);
+            sprintf(buffer, "End of program. Truck is leaving and unloading with load %d/%d.", count, X);
             print_message(buffer, "Trucker:");
             count = 0;
         }

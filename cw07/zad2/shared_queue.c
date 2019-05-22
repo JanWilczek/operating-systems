@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <signal.h>
 #include <time.h>
 #include <string.h>
@@ -241,16 +242,8 @@ int queue_units_sum(void)
 
 void queue_close(void)
 {
-    int queue_id = shmget(queue_key(), 0, 0);
-    if (queue_id == -1)
+    if (shm_unlink(SHM_QUEUE) == -1)
     {
-        perror("shmget");
-    }
-    else
-    {
-        if (shmctl(queue_id, IPC_RMID, NULL) == -1)
-        {
-            perror("shmctl");
-        }
+        perror("shm_unlink");
     }
 }

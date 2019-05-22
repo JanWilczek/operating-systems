@@ -28,19 +28,19 @@ void free_resources(void)
 {
     if (tape_count)
     {
-        sem_remove(tape_count);
+        sem_remove(tape_count, SEM_TAPE_COUNT);
         tape_count = NULL;
     }
 
     if (is_package)
     {
-        sem_remove(is_package);
+        sem_remove(is_package, SEM_IS_PACKAGE);
         is_package = NULL;
     }
 
     if (truck_ready)
     {
-        sem_remove(truck_ready);
+        sem_remove(truck_ready, SEM_TRUCK_READY);
         truck_ready = NULL;
     }
 
@@ -131,9 +131,9 @@ void trucker_loop(int X)
 
 void trucker(int X, int K, int M)
 {
-    truck_ready = sem_init(SEM_TRUCK_READY, 1);
-    tape_count = sem_init(SEM_TAPE_COUNT, K);
-    is_package = sem_init(SEM_IS_PACKAGE, 0);
+    truck_ready = sem_initialize(SEM_TRUCK_READY, 1);
+    tape_count = sem_initialize(SEM_TAPE_COUNT, K);
+    is_package = sem_initialize(SEM_IS_PACKAGE, 0);
 
     if (!truck_ready || !tape_count || !is_package)
     {

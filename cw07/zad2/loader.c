@@ -31,19 +31,22 @@ void sigint_handler(int signum)
 {
     if (truck_ready)
     {
-        free(truck_ready);
+        sem_close(truck_ready);
+        // free(truck_ready);
         truck_ready = NULL;
     }
 
     if (tape_count)
     {
-        free(tape_count);
+        sem_close(tape_count);
+        // free(tape_count);
         tape_count = NULL;
     }
 
     if (is_package)
     {
-        free(is_package);
+        sem_close(is_package);
+        // free(is_package);
         is_package = NULL;
     }
 

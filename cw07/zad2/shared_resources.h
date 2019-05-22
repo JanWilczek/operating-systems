@@ -13,10 +13,10 @@ struct queue_entry
     int package_weight;
 };
 
-#define SEM_TRUCK_READY 1
-#define SEM_TAPE_COUNT 2
-#define SEM_IS_PACKAGE 3
-#define SEM_QUEUE 5
+#define SEM_TRUCK_READY "/SEM_TRUCK_READY"
+#define SEM_TAPE_COUNT "/SEM_TAPE_COUNT"
+#define SEM_IS_PACKAGE "/SEM_IS_PACKAGE"
+#define SEM_QUEUE "/SEM_QUEUE"
 #define SHM_QUEUE "/SHM_QUEUE"
 #define MAX_SHM_SIZE 4096
 

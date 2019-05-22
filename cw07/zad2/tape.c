@@ -17,8 +17,9 @@ void print_tape_message(const char* message)
 
 void tape_init(int K, int M)
 {
-    semaphore_t* queue_sem = sem_init(SEM_QUEUE, 1);
-    free(queue_sem);
+    semaphore_t* queue_sem = sem_initialize(SEM_QUEUE, 1);
+    sem_close(queue_sem);
+    // free(queue_sem);
     queue_init(K, M);
 }
 
@@ -40,7 +41,8 @@ int tape_put_package(int N)
         // Initialization error
         fprintf(stderr, "Loader's packages are too heavy to be put on tape. Exiting.\n");
         sem_signal_one(queue_sem);
-        free(queue_sem);
+        sem_close(queue_sem);
+        // free(queue_sem);
         return -2;
     }
 
@@ -48,7 +50,8 @@ int tape_put_package(int N)
     if (queue_max_units() - queue_units_sum() < N)
     {
         sem_signal_one(queue_sem);
-        free(queue_sem);
+        // free(queue_sem);
+        sem_close(queue_sem);
         return -1;
     }
 
@@ -64,7 +67,8 @@ int tape_put_package(int N)
     }
 
     sem_signal_one(queue_sem);
-    free(queue_sem);
+    sem_close(queue_sem);
+    // free(queue_sem);
     return 0;
 }
 
@@ -84,11 +88,13 @@ struct queue_entry* tape_get_package(void)
 
     semaphore_t* tape_count_tape = sem_get(SEM_TAPE_COUNT);
     sem_signal_one(tape_count_tape);
-    free(tape_count_tape);
+    sem_close(tape_count_tape);
+    // free(tape_count_tape);
 
     print_tape_message("Package taken from tape."); // This has to be synchronized to be true
     sem_signal_one(queue_sem);      // unlock "mutex"
-    free(queue_sem);
+    sem_close(queue_sem);
+    // free(queue_sem);
 
     return qe;
 }
@@ -96,6 +102,6 @@ struct queue_entry* tape_get_package(void)
 void tape_close(void)
 {
     semaphore_t* queue_sem = sem_get(SEM_QUEUE);
-    sem_remove(queue_sem);
+    sem_remove(queue_sem, SEM_QUEUE);
     queue_close();
 }

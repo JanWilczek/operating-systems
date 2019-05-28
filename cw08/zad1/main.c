@@ -1,6 +1,8 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include "filter.h"
 
 
 void print_usage(FILE* stream, const char* program_name)
@@ -29,6 +31,7 @@ int main(int argc, char* argv[])
     };
 
     int nthreads = 0;
+    int is_block = -1;
     char* filter_filepath;
     char* image_filepath;
     char* output_filepath;
@@ -41,27 +44,50 @@ int main(int argc, char* argv[])
             case 'h':   // print help
                 print_usage(stdout, program_name);
                 return 0;
+
             case 'n':   // number of threads
                 nthreads = atoi(argv[optind]);
                 break;
+
             case 'd':   // division type
                 // TODO
+                if (strcmp(argv[optind], "block") == 0)
+                {
+                    is_block = 1;
+                }
+                else if (strcmp(argv[optind], "interleaved") == 0)
+                {
+                    is_block = 0;
+                }
+                else
+                {
+                    fprintf(stderr, "Invalid type of thread filtering. Exiting.\n");
+                    exit(EXIT_FAILURE);
+                }
+                
                 break;
+
             case 'f':   // input image filename
                 image_filepath = argv[optind];
                 break;
+
             case 'l':   // filter's filename
                 filter_filepath = argv[optind];
                 break;
+
             case 'o':   // output filename
                 output_filepath = argv[optind];
                 break;
+
             case -1:    // finished parsing
                 break;
+
             case '?':   // improper option
             default:    // error
                 print_usage(stderr, program_name);
                 exit(EXIT_FAILURE);
         }
     }
+
+    filter_image(image_filepath, filter_filepath, output_filepath, nthreads, is_block);
 }

@@ -1,5 +1,7 @@
 #include "pgm_io.h"
+#include <stdlib.h>
 #include <stdio.h>
+
 
 int** pgm_read(const char* filepath, int* width, int* height)
 {
@@ -9,7 +11,7 @@ int** pgm_read(const char* filepath, int* width, int* height)
     if (file != NULL)
     {   
         int width, height;
-        if (fscanf(file, "P2\n%d %d\n", width, height) != 2)
+        if (fscanf(file, "P2\n%d %d\n", &width, &height) != 2)
         {
             perror("fscanf");
             return image;
@@ -21,17 +23,18 @@ int** pgm_read(const char* filepath, int* width, int* height)
             image[i] = malloc(width * sizeof(int));
         }
 
-        int row = 0;
-        int col = 0;
-        int value;
-        while ((value = fgetc(file)) != EOF)
+        for (int row = 0; row < height; ++row)
         {
-            image[row][col] = value;
-            ++col;
-            if (col >= width)
+            for (int col = 0; col < width; ++col)
             {
-                col = 0;
-                ++row;
+                int value = fgetc(file);
+                if (value == EOF)
+                {
+                    fprintf(stderr, "Invalid input image format.\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                image[row][col] = value;
             }
         }
 
@@ -46,5 +49,5 @@ int** pgm_read(const char* filepath, int* width, int* height)
 
 int pgm_write(const char* filepath, int** image, int width, int height)
 {
-
+    return 0;
 }

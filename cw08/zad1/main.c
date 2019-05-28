@@ -46,16 +46,15 @@ int main(int argc, char* argv[])
                 return 0;
 
             case 'n':   // number of threads
-                nthreads = atoi(argv[optind]);
+                nthreads = atoi(optarg);
                 break;
 
             case 'd':   // division type
-                // TODO
-                if (strcmp(argv[optind], "block") == 0)
+                if (strcmp(optarg, "block") == 0)
                 {
                     is_block = 1;
                 }
-                else if (strcmp(argv[optind], "interleaved") == 0)
+                else if (strcmp(optarg, "interleaved") == 0)
                 {
                     is_block = 0;
                 }
@@ -68,15 +67,15 @@ int main(int argc, char* argv[])
                 break;
 
             case 'f':   // input image filename
-                image_filepath = argv[optind];
+                image_filepath = optarg;
                 break;
 
             case 'l':   // filter's filename
-                filter_filepath = argv[optind];
+                filter_filepath = optarg;
                 break;
 
             case 'o':   // output filename
-                output_filepath = argv[optind];
+                output_filepath = optarg;
                 break;
 
             case -1:    // finished parsing

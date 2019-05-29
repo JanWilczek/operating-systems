@@ -115,6 +115,8 @@ void filter_impl_multithreaded_block(int** image, float** filter, int** output, 
 {
     pthread_t* threads = malloc(num_threads * sizeof(pthread_t));
 
+    clock_t start = clock();
+
     for (int thread = 1; thread <= num_threads; ++thread)
     {
         int from = (thread - 1) * ceil(width / num_threads);
@@ -140,7 +142,10 @@ void filter_impl_multithreaded_block(int** image, float** filter, int** output, 
         threads[thread - 1] = thread_id;
     }
 
-    int total_time_us = 0;
+    clock_t end = clock();
+    int time_spent_creating_threads_us = (int) ((float) (end - start)) / ((float) CLOCKS_PER_SEC / 1e6);
+
+    int total_time_us = time_spent_creating_threads_us;
     for (int i = 0; i < num_threads; ++i)
     {
         int err;
@@ -156,6 +161,8 @@ void filter_impl_multithreaded_block(int** image, float** filter, int** output, 
             free(thread_time_us);
         }
     }
+
+    printf("Spent total time of %d us on filtering.\n", total_time_us);
 
     free(threads);
 }
@@ -199,6 +206,8 @@ void filter_impl_multithreaded_interleaved(int** image, float** filter, int** ou
 {
     pthread_t* threads = malloc(num_threads * sizeof(pthread_t));
 
+    clock_t start = clock();
+
     for (int thread = 1; thread <= num_threads; ++thread)
     {
         struct every* args = malloc(sizeof(struct every));
@@ -221,7 +230,10 @@ void filter_impl_multithreaded_interleaved(int** image, float** filter, int** ou
         threads[thread - 1] = thread_id;
     }
 
-    int total_time_us = 0;
+    clock_t end = clock();
+    int time_spent_creating_threads_us = (int) ((float) (end - start)) / ((float) CLOCKS_PER_SEC / 1e6);
+
+    int total_time_us = time_spent_creating_threads_us;
     for (int i = 0; i < num_threads; ++i)
     {
         int err;
@@ -237,6 +249,8 @@ void filter_impl_multithreaded_interleaved(int** image, float** filter, int** ou
             free(thread_time_us);
         }
     }
+
+    printf("Spent total time of %d us on filtering.\n", total_time_us);
 
     free(threads);
 }

@@ -105,6 +105,8 @@ void* filter_from_to(void* args)
 
 void filter_impl_multithreaded_block(int** image, float** filter, int** output, int width, int height, int c, int num_threads)
 {
+    pthread_t* threads = malloc(num_threads * sizeof(pthread_t));
+
     for (int thread = 1; thread <= num_threads; ++thread)
     {
         int from = (thread - 1) * ceil(width / num_threads);
@@ -126,8 +128,20 @@ void filter_impl_multithreaded_block(int** image, float** filter, int** output, 
         if ((err = pthread_create(&thread_id, NULL, filter_from_to, args)) != 0)
         {
             fprintf(stderr, "pthread_create: %s\n", strerror(err));
+        }        
+        threads[thread - 1] = thread_id;
+    }
+
+    for (int i = 0; i < num_threads; ++i)
+    {
+        int err;
+        if ((err = pthread_join(threads[i], NULL)) != 0)
+        {
+            fprintf(stderr, "pthread_join: %s\n", strerror(err));
         }
     }
+
+    free(threads);
 }
 
 struct every {

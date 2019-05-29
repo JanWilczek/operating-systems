@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <pthread.h>
+#include <string.h>
+
 
 #define MAX(a, b) ((a >= b) ? a : b)
 
@@ -74,15 +77,30 @@ void filter_impl_synchronous(int **image, float **filter, int **output, int widt
     }
 }
 
-void filter_from_to(int** image, float** filter, int** output, int width, int height, int c, int from, int to)
+struct from_to{
+    int** image;
+    float** filter;
+    int** output;
+    int width;
+    int height;
+    int c;
+    int from;
+    int to;
+};
+
+void* filter_from_to(void* args)
 {
-    for (int x = 0; x < height; ++x)
+    struct from_to* arguments = (struct from_to*) args;
+    for (int x = 0; x < arguments->height; ++x)
     {
-        for (int y = from; y <= to; ++y)
+        for (int y = arguments->from; y <= arguments->to; ++y)
         {
-            output[x][y] = filter_xy(image, filter, x, y, c);
+            arguments->output[x][y] = filter_xy(arguments->image, arguments->filter, x, y, arguments->c);
         }
-    } 
+    }
+    free(arguments);
+
+    pthread_exit(0);
 }
 
 void filter_impl_multithreaded_block(int** image, float** filter, int** output, int width, int height, int c, int num_threads)
@@ -91,27 +109,90 @@ void filter_impl_multithreaded_block(int** image, float** filter, int** output, 
     {
         int from = (thread - 1) * ceil(width / num_threads);
         int to = thread * ceil(width / num_threads);
-        filter_from_to(image, filter, output, width, height, c, from, to);
-    }
-}
+        // filter_from_to(image, filter, output, width, height, c, from, to);
 
-void filter_every(int** image, float** filter, int** output, int width, int height, int c, int thread_num, int num_threads)
-{
-    for (int x = 0; x < height; ++x)
-    {
-        for (int y = thread_num - 1; y < width; y += num_threads)
+        struct from_to* args = malloc(sizeof(struct from_to));
+        args->image = image;
+        args->filter = filter;
+        args->output = output;
+        args->width = width;
+        args->height = height;
+        args->c = c;
+        args->from = from;
+        args->to = to;
+
+        pthread_t thread_id;
+        int err;
+        if ((err = pthread_create(&thread_id, NULL, filter_from_to, args)) != 0)
         {
-            output[x][y] = filter_xy(image, filter, x, y, c);
+            fprintf(stderr, "pthread_create: %s\n", strerror(err));
         }
     }
 }
 
+struct every {
+    int** image;
+    float** filter;
+    int** output;
+    int width;
+    int height;
+    int c;
+    int thread_num;
+    int num_threads;
+};
+
+void* filter_every(void* args)
+{
+    struct every* arguments = (struct every*) args;
+
+    for (int x = 0; x < arguments->height; ++x)
+    {
+        for (int y = arguments->thread_num - 1; y < arguments->width; y += arguments->num_threads)
+        {
+            arguments->output[x][y] = filter_xy(arguments->image, arguments->filter, x, y, arguments->c);
+        }
+    }
+    free(arguments);
+
+    pthread_exit(0);
+}
+
 void filter_impl_multithreaded_interleaved(int** image, float** filter, int** output, int width, int height, int c, int num_threads)
 {
+    pthread_t* threads = malloc(num_threads * sizeof(pthread_t));
+
     for (int thread = 1; thread <= num_threads; ++thread)
     {
-        filter_every(image, filter, output, width, height, c, thread, num_threads);
+        struct every* args = malloc(sizeof(struct every));
+        args->image = image;
+        args->filter = filter;
+        args->output = output;
+        args->width = width;
+        args->height = height;
+        args->c = c;
+        args->thread_num = thread;
+        args->num_threads = num_threads;
+
+        // filter_every(image, filter, output, width, height, c, thread, num_threads);
+        pthread_t thread_id;
+        int err;
+        if ((err = pthread_create(&thread_id, NULL, filter_every, args)) != 0)
+        {
+            fprintf(stderr, "pthread_create: %s\n", strerror(err));
+        }
+        threads[thread - 1] = thread_id;
     }
+
+    for (int i = 0; i < num_threads; ++i)
+    {
+        int err;
+        if ((err = pthread_join(threads[i], NULL)) != 0)
+        {
+            fprintf(stderr, "pthread_join: %s\n", strerror(err));
+        }
+    }
+
+    free(threads);
 }
 
 void filter_impl_multithreaded(int** image, float** filter, int** output, int width, int height, int c, int num_threads, int is_block)

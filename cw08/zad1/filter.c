@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define MAX(a, b) ((a > b) ? a : b)
+#define MAX(a, b) ((a >= b) ? a : b)
 
 float **read_filter_coefficients(const char *filepath, int *c)
 {
-    float **image = NULL;
+    float **filter = NULL;
 
     FILE *file = fopen(filepath, "r");
     if (file != NULL)
@@ -16,13 +16,13 @@ float **read_filter_coefficients(const char *filepath, int *c)
         if (fscanf(file, "%d\n", c) != 1)
         {
             perror("fscanf");
-            return image;
+            return filter;
         }
 
-        image = malloc(*c * sizeof(int *));
+        filter = malloc(*c * sizeof(int *));
         for (int i = 0; i < *c; ++i)
         {
-            image[i] = malloc(*c * sizeof(int));
+            filter[i] = malloc(*c * sizeof(int));
         }
 
         for (int row = 0; row < *c; ++row)
@@ -37,7 +37,7 @@ float **read_filter_coefficients(const char *filepath, int *c)
                     exit(EXIT_FAILURE);
                 }
 
-                image[row][col] = value;
+                filter[row][col] = value;
             }
         }
 
@@ -47,7 +47,7 @@ float **read_filter_coefficients(const char *filepath, int *c)
         }
     }
 
-    return image;
+    return filter;
 }
 
 int filter_xy(int **image, float **filter, int x, int y, int c)
@@ -57,7 +57,7 @@ int filter_xy(int **image, float **filter, int x, int y, int c)
     {
         for (int j = 0; j < c; ++j)
         {
-            sum += image[(int)MAX(1, x - ceil(c / 2) + i - 1)][(int)MAX(1, y - ceil(c / 2) + j - 1)] * filter[i][j];
+            sum += image[(int)MAX(0, x - (int) ceil(((float)c) / 2) + i /* -1 */)][(int)MAX(0, y - (int) ceil(((float)c) / 2) + j /* - 1 */)] * filter[i][j];
         }
     }
     return (int)roundf(sum);
@@ -95,13 +95,13 @@ void filter_image(const char *input_image_path, const char *filter_path, const c
     }
 
     // Create output image
-    int **output = malloc(height * sizeof(int));
+    int **output = malloc(height * sizeof(int*));
     for (int i = 0; i < height; ++i)
     {
         output[i] = malloc(width * sizeof(int));
     }
 
-    // Actual image filtering
+    // // Actual image filtering
     filter_impl(image, filter, output, width, height, c);
 
     // Write the output to file

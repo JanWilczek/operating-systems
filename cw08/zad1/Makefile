@@ -18,4 +18,4 @@ pgm_io.o: pgm_io.h pgm_io.c
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c pgm_io.c
 
 clean:
-	rm *.o imfilt
+	rm *.o imfilt ./test_data/filtered_image.pgm

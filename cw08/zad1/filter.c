@@ -173,6 +173,8 @@ struct every {
 
 void* filter_every(void* args)
 {
+    clock_t start = clock();
+
     struct every* arguments = (struct every*) args;
 
     for (int x = 0; x < arguments->height; ++x)
@@ -184,7 +186,13 @@ void* filter_every(void* args)
     }
     free(arguments);
 
-    pthread_exit(0);
+    clock_t end = clock();
+    int time_spent_us = (int) ((float) (end - start)) / ((float) CLOCKS_PER_SEC / 1e6);
+
+    int* retval = malloc(sizeof(int));
+    *retval = time_spent_us;
+
+    pthread_exit(retval);
 }
 
 void filter_impl_multithreaded_interleaved(int** image, float** filter, int** output, int width, int height, int c, int num_threads)
@@ -213,12 +221,20 @@ void filter_impl_multithreaded_interleaved(int** image, float** filter, int** ou
         threads[thread - 1] = thread_id;
     }
 
+    int total_time_us = 0;
     for (int i = 0; i < num_threads; ++i)
     {
         int err;
-        if ((err = pthread_join(threads[i], NULL)) != 0)
+        int* thread_time_us;
+        if ((err = pthread_join(threads[i], (void **) &thread_time_us)) != 0)
         {
             fprintf(stderr, "pthread_join: %s\n", strerror(err));
+        }
+        else
+        {
+            printf("Thread %ld filtered its columns in %d us.\n", threads[i], *thread_time_us);
+            total_time_us += *thread_time_us;
+            free(thread_time_us);
         }
     }
 

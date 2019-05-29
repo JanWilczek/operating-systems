@@ -7,7 +7,13 @@
 #include <string.h>
 
 
-#define MAX(a, b) ((a >= b) ? a : b)
+#define MAX(a, b) ((a > b) ? a : b)
+#define MIN(a, b) ((a < b) ? a : b)
+
+int ticks_to_microseconds(clock_t start, clock_t end)
+{
+    return (int) ((float) (end - start)) / ((float) CLOCKS_PER_SEC / 1e6);
+}
 
 float **read_filter_coefficients(const char *filepath, int *c)
 {
@@ -53,14 +59,16 @@ float **read_filter_coefficients(const char *filepath, int *c)
     return filter;
 }
 
-int filter_xy(int **image, float **filter, int x, int y, int c)
+int filter_xy(int **image, float **filter, int x, int y, int width, int height, int c)
 {
     float sum = 0.f;
     for (int i = 0; i < c; ++i)
     {
         for (int j = 0; j < c; ++j)
         {
-            sum += image[(int)MAX(0, x - (int) ceil(((float)c) / 2) + i - 1)][(int)MAX(0, y - (int) ceil(((float)c) / 2) + j - 1)] * filter[i][j];
+            int imrow = (int)MIN(height - 1, MAX(0, x - (int) ceil(((float)c) / 2) + i - 1));
+            int imcol = (int)MIN(width - 1, MAX(0, y - (int) ceil(((float)c) / 2) + j - 1));
+            sum += image[imrow][imcol] * filter[i][j];
         }
     }
     return (int)roundf(sum);
@@ -72,7 +80,7 @@ void filter_impl_synchronous(int **image, float **filter, int **output, int widt
     {
         for (int y = 0; y < width; ++y)
         {
-            output[x][y] = filter_xy(image, filter, x, y, c);
+            output[x][y] = filter_xy(image, filter, x, y, width, height, c);
         }
     }
 }
@@ -97,13 +105,13 @@ void* filter_from_to(void* args)
     {
         for (int y = arguments->from; y <= arguments->to; ++y)
         {
-            arguments->output[x][y] = filter_xy(arguments->image, arguments->filter, x, y, arguments->c);
+            arguments->output[x][y] = filter_xy(arguments->image, arguments->filter, x, y, arguments->width, arguments->height, arguments->c);
         }
     }
     free(arguments);
 
     clock_t end = clock();
-    int time_spent_us = (int) ((float) (end - start)) / ((float) CLOCKS_PER_SEC / 1e6);
+    int time_spent_us = ticks_to_microseconds(start, end);
 
     int* retval = malloc(sizeof(int));
     *retval = time_spent_us;
@@ -114,8 +122,6 @@ void* filter_from_to(void* args)
 void filter_impl_multithreaded_block(int** image, float** filter, int** output, int width, int height, int c, int num_threads)
 {
     pthread_t* threads = malloc(num_threads * sizeof(pthread_t));
-
-    clock_t start = clock();
 
     for (int thread = 1; thread <= num_threads; ++thread)
     {
@@ -142,10 +148,6 @@ void filter_impl_multithreaded_block(int** image, float** filter, int** output, 
         threads[thread - 1] = thread_id;
     }
 
-    clock_t end = clock();
-    int time_spent_creating_threads_us = (int) ((float) (end - start)) / ((float) CLOCKS_PER_SEC / 1e6);
-
-    int total_time_us = time_spent_creating_threads_us;
     for (int i = 0; i < num_threads; ++i)
     {
         int err;
@@ -157,12 +159,9 @@ void filter_impl_multithreaded_block(int** image, float** filter, int** output, 
         else
         {
             printf("Thread %ld filtered its columns in %d us.\n", threads[i], *thread_time_us);
-            total_time_us += *thread_time_us;
             free(thread_time_us);
         }
     }
-
-    printf("Spent total time of %d us on filtering.\n", total_time_us);
 
     free(threads);
 }
@@ -188,13 +187,13 @@ void* filter_every(void* args)
     {
         for (int y = arguments->thread_num - 1; y < arguments->width; y += arguments->num_threads)
         {
-            arguments->output[x][y] = filter_xy(arguments->image, arguments->filter, x, y, arguments->c);
+            arguments->output[x][y] = filter_xy(arguments->image, arguments->filter, x, y, arguments->width, arguments->height, arguments->c);
         }
     }
     free(arguments);
 
     clock_t end = clock();
-    int time_spent_us = (int) ((float) (end - start)) / ((float) CLOCKS_PER_SEC / 1e6);
+    int time_spent_us = ticks_to_microseconds(start, end);
 
     int* retval = malloc(sizeof(int));
     *retval = time_spent_us;
@@ -205,8 +204,6 @@ void* filter_every(void* args)
 void filter_impl_multithreaded_interleaved(int** image, float** filter, int** output, int width, int height, int c, int num_threads)
 {
     pthread_t* threads = malloc(num_threads * sizeof(pthread_t));
-
-    clock_t start = clock();
 
     for (int thread = 1; thread <= num_threads; ++thread)
     {
@@ -230,10 +227,6 @@ void filter_impl_multithreaded_interleaved(int** image, float** filter, int** ou
         threads[thread - 1] = thread_id;
     }
 
-    clock_t end = clock();
-    int time_spent_creating_threads_us = (int) ((float) (end - start)) / ((float) CLOCKS_PER_SEC / 1e6);
-
-    int total_time_us = time_spent_creating_threads_us;
     for (int i = 0; i < num_threads; ++i)
     {
         int err;
@@ -245,18 +238,17 @@ void filter_impl_multithreaded_interleaved(int** image, float** filter, int** ou
         else
         {
             printf("Thread %ld filtered its columns in %d us.\n", threads[i], *thread_time_us);
-            total_time_us += *thread_time_us;
             free(thread_time_us);
         }
     }
-
-    printf("Spent total time of %d us on filtering.\n", total_time_us);
 
     free(threads);
 }
 
 void filter_impl_multithreaded(int** image, float** filter, int** output, int width, int height, int c, int num_threads, int is_block)
 {
+    clock_t start = clock();
+
     if (is_block)
     {
         filter_impl_multithreaded_block(image, filter, output, width, height, c, num_threads);
@@ -265,6 +257,10 @@ void filter_impl_multithreaded(int** image, float** filter, int** output, int wi
     {
         filter_impl_multithreaded_interleaved(image, filter, output, width, height, c, num_threads);
     }
+ 
+    clock_t end = clock();
+    int total_time_us = ticks_to_microseconds(start, end);
+    printf("Time elapsed: %d us, image resolution: %dx%d, filter size: %d, number of threads used: %d, method: %s.\n", total_time_us, width, height, c, num_threads, is_block ? "block" : "interleaved");
 }
 
 void filter_image(const char *input_image_path, const char *filter_path, const char *output_image_path, int num_threads, int is_block)

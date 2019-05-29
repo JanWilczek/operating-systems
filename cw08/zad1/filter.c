@@ -57,13 +57,13 @@ int filter_xy(int **image, float **filter, int x, int y, int c)
     {
         for (int j = 0; j < c; ++j)
         {
-            sum += image[(int)MAX(0, x - (int) ceil(((float)c) / 2) + i /* -1 */)][(int)MAX(0, y - (int) ceil(((float)c) / 2) + j /* - 1 */)] * filter[i][j];
+            sum += image[(int)MAX(0, x - (int) ceil(((float)c) / 2) + i - 1)][(int)MAX(0, y - (int) ceil(((float)c) / 2) + j - 1)] * filter[i][j];
         }
     }
     return (int)roundf(sum);
 }
 
-void filter_impl(int **image, float **filter, int **output, int width, int height, int c)
+void filter_impl_synchronous(int **image, float **filter, int **output, int width, int height, int c)
 {
     for (int x = 0; x < height; ++x)
     {
@@ -71,6 +71,58 @@ void filter_impl(int **image, float **filter, int **output, int width, int heigh
         {
             output[x][y] = filter_xy(image, filter, x, y, c);
         }
+    }
+}
+
+void filter_from_to(int** image, float** filter, int** output, int width, int height, int c, int from, int to)
+{
+    for (int x = 0; x < height; ++x)
+    {
+        for (int y = from; y <= to; ++y)
+        {
+            output[x][y] = filter_xy(image, filter, x, y, c);
+        }
+    } 
+}
+
+void filter_impl_multithreaded_block(int** image, float** filter, int** output, int width, int height, int c, int num_threads)
+{
+    for (int thread = 1; thread <= num_threads; ++thread)
+    {
+        int from = (thread - 1) * ceil(width / num_threads);
+        int to = thread * ceil(width / num_threads);
+        filter_from_to(image, filter, output, width, height, c, from, to);
+    }
+}
+
+void filter_every(int** image, float** filter, int** output, int width, int height, int c, int thread_num, int num_threads)
+{
+    for (int x = 0; x < height; ++x)
+    {
+        for (int y = thread_num - 1; y < width; y += num_threads)
+        {
+            output[x][y] = filter_xy(image, filter, x, y, c);
+        }
+    }
+}
+
+void filter_impl_multithreaded_interleaved(int** image, float** filter, int** output, int width, int height, int c, int num_threads)
+{
+    for (int thread = 1; thread <= num_threads; ++thread)
+    {
+        filter_every(image, filter, output, width, height, c, thread, num_threads);
+    }
+}
+
+void filter_impl_multithreaded(int** image, float** filter, int** output, int width, int height, int c, int num_threads, int is_block)
+{
+    if (is_block)
+    {
+        filter_impl_multithreaded_block(image, filter, output, width, height, c, num_threads);
+    }
+    else
+    {
+        filter_impl_multithreaded_interleaved(image, filter, output, width, height, c, num_threads);
     }
 }
 
@@ -101,8 +153,8 @@ void filter_image(const char *input_image_path, const char *filter_path, const c
         output[i] = malloc(width * sizeof(int));
     }
 
-    // // Actual image filtering
-    filter_impl(image, filter, output, width, height, c);
+    // Actual image filtering
+    filter_impl_multithreaded(image, filter, output, width, height, c, num_threads, is_block);
 
     // Write the output to file
     if (pgm_write(output_image_path, output, width, height) == 1)

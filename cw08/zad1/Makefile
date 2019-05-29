@@ -3,7 +3,7 @@ TEMP_FLAGS=-g -Wall
 all: imfilt
 
 test: imfilt
-	./imfilt -n 4 -d block -f ./test_data/apollonian_gasket.ascii.pgm -l ./test_data/test_filter.txt -o ./test_data/filtered_image.pgm
+	./imfilt -n 4 -d interleaved -f ./test_data/apollonian_gasket.ascii.pgm -l ./test_data/test_filter.txt -o ./test_data/filtered_image.pgm
 
 imfilt: main.o filter.o pgm_io.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) filter.o pgm_io.o main.o -o imfilt -lm

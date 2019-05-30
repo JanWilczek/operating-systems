@@ -38,6 +38,10 @@ struct thread_args
     pthread_cond_t *can_enter_cv;
     pthread_mutex_t *can_enter_mutex;
 
+    int *can_exit;  // boolean
+    pthread_cond_t* can_exit_cv;
+    pthread_mutex_t* can_exit_mutex;
+
     int *current_carriage; // current carriage to enter if can_enter is true
 
     int* start_pressed;
@@ -83,7 +87,7 @@ void *passenger_thread(void *args)
         {
             pthread_cond_wait(a->can_enter_cv, a->can_enter_mutex);
         }
-        pthread_mutex_unlock(a->can_enter_mutex);
+        // pthread_mutex_unlock(a->can_enter_mutex);
 
         // 2. Enter the carriage and write out current number of passengers in the carriage.
         struct carriage *current = get_current_carriage(a);
@@ -102,10 +106,10 @@ void *passenger_thread(void *args)
         }
         else if (current->number_of_passengers == a->carriage_capacity)
         {
-            pthread_mutex_lock(a->can_enter_mutex);
+            // pthread_mutex_lock(a->can_enter_mutex);
             *a->can_enter = 0;
             pthread_cond_broadcast(a->can_enter_cv);
-            pthread_mutex_unlock(a->can_enter_mutex);
+            // pthread_mutex_unlock(a->can_enter_mutex);
 
             // 3. Press start.
             press_start(a);
@@ -115,10 +119,18 @@ void *passenger_thread(void *args)
         }
 
         pthread_mutex_unlock(&current->enter_mutex);
-        // pthread_mutex_unlock(a->can_enter_mutex);
+        pthread_mutex_unlock(a->can_enter_mutex);
 
         // 4. Leave the carriage and write out current number of passengers in the carriage.
         // TODO: use can_exit
+        // These 6 lines are wrong, because passengers from all carriages would start exiting.
+        pthread_mutex_lock(a->can_exit_mutex);
+        while (!(*a->can_exit))
+        {
+            pthread_cond_wait(a->can_exit_cv, a->can_exit_mutex);
+        }
+        pthread_mutex_unlock(a->can_exit_mutex);
+
     }
 
     // 5. End thread
@@ -137,19 +149,27 @@ void *carriage_thread(void *args)
     while(get_number_of_rides(a) > 0)
     {
         // Wait until this carriage is current
-        pthread_mutex_lock(a->can_enter_mutex);
+        pthread_mutex_lock(a->can_enter_mutex); // TODO change this to current_carriage cv+mutex?
         while (*a->current_carriage != a->index)
         {
             pthread_cond_wait(a->can_enter_cv, a->can_enter_mutex);
         }
+        pthread_mutex_unlock(a->can_enter_mutex);
 
         // 1. Open the door.
         sprintf(buffer, "Carriage %d opens the door.\n", a->index);
         print_message(buffer);
 
-        *a->can_enter = 1;  // TODO: change to can_exit
-        pthread_cond_broadcast(a->can_enter_cv);
-        pthread_mutex_unlock(a->can_enter_mutex);
+        // Allow exiting of passengers
+        pthread_mutex_lock(a->can_exit_mutex);
+        *a->can_exit = 1;
+        pthread_cond_broadcast(a->can_exit_cv);
+        pthread_mutex_unlock(a->can_exit_mutex);
+
+        // Allow entry of passengers
+        // *a->can_enter = 1;  // TODO: change to can_exit
+        // pthread_cond_broadcast(a->can_enter_cv);
+        // pthread_mutex_unlock(a->can_enter_mutex);
 
         // 2. Close the door.
         pthread_mutex_lock(a->start_pressed_mutex);
@@ -205,9 +225,15 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
     struct passenger *passengers = malloc(num_passengers * sizeof(struct passenger));
     struct carriage *carriages = malloc(num_carriages * sizeof(struct carriage));
 
+    pthread_mutex_t rides_left_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_t can_enter_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t can_enter_cv = PTHREAD_COND_INITIALIZER;
+    pthread_mutex_t can_exit_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t can_exit_cv = PTHREAD_COND_INITIALIZER;
+    pthread_mutex_t start_pressed_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t start_pressed_cv = PTHREAD_COND_INITIALIZER;
     int can_enter = 0;
+    int can_exit = 1;
 
     int current_carriage = -1;
     int start_pressed = 0;
@@ -219,16 +245,19 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
     general_arguments->num_carriages = num_carriages;
     general_arguments->carriages = &carriages;
     general_arguments->rides_left = &number_of_rides;
-    pthread_mutex_init(general_arguments->rides_left_mutex, NULL);
+    general_arguments->rides_left_mutex = &rides_left_mutex;
     general_arguments->carriage_capacity = carriage_capacity;
     general_arguments->index = -1;
     general_arguments->can_enter = &can_enter;
     general_arguments->can_enter_cv = &can_enter_cv;
     general_arguments->can_enter_mutex = &can_enter_mutex;
+    general_arguments->can_exit = &can_exit;
+    general_arguments->can_exit_cv = &can_exit_cv;
+    general_arguments->can_exit_mutex = &can_exit_mutex;
     general_arguments->current_carriage = &current_carriage;
-    general_arguments->start_pressed = & start_pressed;
-    pthread_mutex_init(general_arguments->start_pressed_mutex, NULL);
-    pthread_cond_init(general_arguments->start_pressed_cv, NULL);
+    general_arguments->start_pressed = &start_pressed;
+    general_arguments->start_pressed_mutex = &start_pressed_mutex;
+    general_arguments->start_pressed_cv = &start_pressed_cv;
 
     // Start passenger threads
     for (int i = 0; i < num_passengers; ++i)
@@ -293,9 +322,13 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
         pthread_join(passengers[i].id, NULL);
     }
 
+    pthread_cond_destroy(&start_pressed_cv);
+    pthread_mutex_destroy(&start_pressed_mutex);
+    pthread_cond_destroy(&can_exit_cv);
+    pthread_mutex_destroy(&can_exit_mutex);
     pthread_cond_destroy(&can_enter_cv);
     pthread_mutex_destroy(&can_enter_mutex);
-    pthread_mutex_destroy(general_arguments->rides_left_mutex);
+    pthread_mutex_destroy(&rides_left_mutex);
 
     free(general_arguments);
     free(passengers);

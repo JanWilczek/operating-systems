@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
+#include <unistd.h>
+
+#define RIDE_TIME_US 100000
 
 struct passenger
 {
@@ -89,22 +92,22 @@ void *passenger_thread(void *args)
         printf("Passenger %d entered carriage %d which currently has %d/%d people.\n",
                a->index, *a->current_carriage, current->number_of_passengers, a->carriage_capacity);
 
-        if (current->number_of_passengers >= a->carriage_capacity)
+        if (current->number_of_passengers > a->carriage_capacity)
+        {
+            // FATAL ERROR
+            fprintf(stderr, "Too many passengers on carriage %d.\n", *a->current_carriage);
+            exit(EXIT_FAILURE);
+        }
+        else if (current->number_of_passengers == a->carriage_capacity)
         {
             pthread_mutex_lock(a->can_enter_mutex);
             *a->can_enter = 0;
             pthread_cond_broadcast(a->can_enter_cv);
             pthread_mutex_unlock(a->can_enter_mutex);
 
-            // pthread_mutex_lock(a->can_enter_mutex);
-            // *a->current_carriage++;
-
             // 3. Press start.
             press_start(a);
             printf("Passenger %d in carriage %d pressed \'start\'.\n", a->index, *a->current_carriage);
-            // *a->can_enter = 1;
-            // pthread_cond_broadcast(a->can_enter_cv);
-            // pthread_mutex_unlock(a->can_enter_mutex);
 
         }
 
@@ -112,6 +115,7 @@ void *passenger_thread(void *args)
         // pthread_mutex_unlock(a->can_enter_mutex);
 
         // 4. Leave the carriage and write out current number of passengers in the carriage.
+        // TODO: use can_exit
     }
 
     // 5. End thread
@@ -129,14 +133,14 @@ void *carriage_thread(void *args)
     {
         // Wait until this carriage is current
         pthread_mutex_lock(a->can_enter_mutex);
-        while (a->current_carriage != a->index)
+        while (*a->current_carriage != a->index)
         {
             pthread_cond_wait(a->can_enter_cv, a->can_enter_mutex);
         }
 
         // 1. Open the door.
         printf("Carriage %d opens the door.\n", a->index);
-        *a->can_enter = 1;
+        *a->can_enter = 1;  // TODO: change to can_exit
         pthread_cond_broadcast(a->can_enter_cv);
         pthread_mutex_unlock(a->can_enter_mutex);
 
@@ -147,32 +151,41 @@ void *carriage_thread(void *args)
             pthread_cond_wait(a->start_pressed_cv, a->start_pressed_mutex);
         }
         *a->start_pressed = 0;
-        pthread_mutex_unlock(a->start_pressed);
-        printf("Carriage %d closese the door.\n", a->index);
+        pthread_mutex_unlock(a->start_pressed_mutex);
+        printf("Carriage %d closes the door.\n", a->index);
 
+        // Check if it's the last carriage
         if (a->index < a->num_carriages - 1)
         {
+            // If it's not the last carriage, move them along
             pthread_mutex_lock(a->can_enter_mutex);
-            *a->current_carriage++;
             
             // Wait for the carriages to switch
-            sleep(1);
+            usleep(100);
+            ++(*a->current_carriage);
 
-            pthread_cond_broadcast(a->can_enter_cv);
+            pthread_cond_broadcast(a->can_enter_cv);    // wake up next carriage
             pthread_mutex_unlock(a->can_enter_mutex);
         }
         else
         {
             // 3. Start the ride.
             printf("The ride started.\n");
-            sleep(a->ride_duration);
+            usleep(RIDE_TIME_US);
 
             // 4. End the ride.
+            printf("The ride ended.\n");
+            
+            pthread_mutex_lock(a->can_enter_mutex);
+            *a->current_carriage = 0;
+            pthread_cond_broadcast(a->can_enter_cv);
+            pthread_mutex_unlock(a->can_enter_mutex);
         }
 
     }
 
     // 5. End thread.
+    printf("The carriage %d's thread has ended.\n", a->index);
 
     free(a);
     return 0;

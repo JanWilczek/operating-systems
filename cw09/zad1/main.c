@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include "rollercoaster.h"
 
 
 void print_usage(FILE* stream, const char* program_name)

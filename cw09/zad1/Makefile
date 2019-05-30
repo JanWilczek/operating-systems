@@ -2,11 +2,17 @@ TEMP_FLAGS=-g -Wall
 
 all: rollercoaster
 
-rollercoaster: main.o
-	gcc $(CFLAGS) $(TEMP_FLAGS) -o rollercoaster main.o
+test: rollercoaster
+	./rollercoaster 20 5 2 4
 
-main.o: main.c
+rollercoaster: main.o rollercoaster.o
+	gcc $(CFLAGS) $(TEMP_FLAGS) -o rollercoaster main.o rollercoaster.o -pthread
+
+main.o: main.c rollercoaster.h
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c main.c
+
+rollercoaster.o: rollercoaster.h rollercoaster.c
+	gcc $(CFLAGS) $(TEMP_FLAGS) -c rollercoaster.c -pthread
 
 clean:
 	rm *.o rollercoaster

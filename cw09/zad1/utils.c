@@ -25,9 +25,9 @@ char* format_time(struct timespec* spec)
     return buffer;
 }
 
-void print_message(const char *message, const char* preamble)
+void print_message(const char *message)
 {
     char *time_stamp = get_precise_time();
-    printf("%s %s %s\n", time_stamp, preamble, message);
+    printf("%s %s\n", time_stamp, message);
     free(time_stamp);
 }

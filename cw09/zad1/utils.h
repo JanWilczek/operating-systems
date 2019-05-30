@@ -7,7 +7,7 @@
 
 char* get_precise_time(void);
 char* format_time(struct timespec* tm);
-void print_message(const char* message, const char* preamble);
+void print_message(const char* message);
 
 #ifdef __cplusplus
     }

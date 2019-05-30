@@ -1,5 +1,5 @@
 #include "rollercoaster.h"
-// #include "utils.h"
+#include "utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -73,6 +73,7 @@ void press_start(struct thread_args* a)
 void *passenger_thread(void *args)
 {
     struct thread_args *a = (struct thread_args *)args;
+    char buffer[400];
 
     while (get_number_of_rides(a) > 0)  // is it ok?
     {
@@ -89,8 +90,9 @@ void *passenger_thread(void *args)
         pthread_mutex_lock(&current->enter_mutex);
         current->passengers[current->number_of_passengers++] = a->index; // place the passenger in the carriage
         
-        printf("Passenger %d entered carriage %d which currently has %d/%d people.\n",
+        sprintf(buffer, "Passenger %d entered carriage %d which currently has %d/%d people.\n",
                a->index, *a->current_carriage, current->number_of_passengers, a->carriage_capacity);
+        print_message(buffer);
 
         if (current->number_of_passengers > a->carriage_capacity)
         {
@@ -107,7 +109,8 @@ void *passenger_thread(void *args)
 
             // 3. Press start.
             press_start(a);
-            printf("Passenger %d in carriage %d pressed \'start\'.\n", a->index, *a->current_carriage);
+            sprintf(buffer, "Passenger %d in carriage %d pressed \'start\'.\n", a->index, *a->current_carriage);
+            print_message(buffer);
 
         }
 
@@ -119,7 +122,8 @@ void *passenger_thread(void *args)
     }
 
     // 5. End thread
-    printf("Passenger %d's thread is ending.\n", a->index);
+    sprintf(buffer, "Passenger %d's thread is ending.\n", a->index);
+    print_message(buffer);
 
     free(a);
     return 0;
@@ -128,6 +132,7 @@ void *passenger_thread(void *args)
 void *carriage_thread(void *args)
 {
     struct thread_args *a = (struct thread_args *)args;
+    char buffer[400];
 
     while(get_number_of_rides(a) > 0)
     {
@@ -139,7 +144,9 @@ void *carriage_thread(void *args)
         }
 
         // 1. Open the door.
-        printf("Carriage %d opens the door.\n", a->index);
+        sprintf(buffer, "Carriage %d opens the door.\n", a->index);
+        print_message(buffer);
+
         *a->can_enter = 1;  // TODO: change to can_exit
         pthread_cond_broadcast(a->can_enter_cv);
         pthread_mutex_unlock(a->can_enter_mutex);
@@ -152,7 +159,8 @@ void *carriage_thread(void *args)
         }
         *a->start_pressed = 0;
         pthread_mutex_unlock(a->start_pressed_mutex);
-        printf("Carriage %d closes the door.\n", a->index);
+        sprintf(buffer, "Carriage %d closes the door.\n", a->index);
+        print_message(buffer);
 
         // Check if it's the last carriage
         if (a->index < a->num_carriages - 1)
@@ -170,11 +178,11 @@ void *carriage_thread(void *args)
         else
         {
             // 3. Start the ride.
-            printf("The ride started.\n");
+            print_message("The ride started.\n");
             usleep(RIDE_TIME_US);
 
             // 4. End the ride.
-            printf("The ride ended.\n");
+            print_message("The ride ended.\n");
             
             pthread_mutex_lock(a->can_enter_mutex);
             *a->current_carriage = 0;
@@ -185,7 +193,8 @@ void *carriage_thread(void *args)
     }
 
     // 5. End thread.
-    printf("The carriage %d's thread has ended.\n", a->index);
+    sprintf(buffer, "The carriage %d's thread has ended.\n", a->index);
+    print_message(buffer);
 
     free(a);
     return 0;

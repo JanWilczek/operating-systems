@@ -1,4 +1,5 @@
 #include "rollercoaster.h"
+// #include "utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -13,7 +14,7 @@ struct carriage
 {
     pthread_t id;
     pthread_mutex_t enter_mutex;
-    int* passengers;
+    int *passengers;
     int number_of_passengers;
 };
 
@@ -21,34 +22,70 @@ struct thread_args
 {
     struct passenger **passengers;
     struct carriage **carriages;
+
     int *rides_left; // can be changed only by the first carriage
+    pthread_mutex_t* rides_left_mutex;
+
     int carriage_capacity;
-    int index; // contains passenger index for passenger thread and carriage index for carriage thread
-    int* can_enter; // boolean
+    int index;      // contains passenger index for passenger thread and carriage index for carriage thread
+    int *can_enter; // boolean
     pthread_cond_t *can_enter_cv;
     pthread_mutex_t *can_enter_mutex;
-    int* current_carriage;  // current carriage to enter if can_enter is true
+    int *current_carriage; // current carriage to enter if can_enter is true
 };
+
+struct carriage *get_current_carriage(struct thread_args *a)
+{
+    return &(*a->carriages)[*a->current_carriage];
+}
+
+/** 
+ * Thread-safe.
+ * */
+int get_number_of_rides(struct thread_args* a)
+{
+    int result;
+    pthread_mutex_lock(a->rides_left_mutex);
+    result = *a->rides_left;
+    pthread_mutex_unlock(a->rides_left_mutex);
+    return result;
+}
 
 void *passenger_thread(void *args)
 {
     struct thread_args *a = (struct thread_args *)args;
 
-    // 1. Wait for carriage to be available (conditional variable).
-    pthread_mutex_lock(a->can_enter_mutex);
-    while (!(*a->can_enter))
+    while (get_number_of_rides(a) > 0)  // is it ok?
     {
-        pthread_cond_wait(a->can_enter_cv, a->can_enter_mutex);
+        // 1. Wait for carriage to be available (conditional variable).
+        pthread_mutex_lock(a->can_enter_mutex);
+        while (!(*a->can_enter))
+        {
+            pthread_cond_wait(a->can_enter_cv, a->can_enter_mutex);
+        }
+
+        // 2. Enter the carriage and write out current number of passengers in the carriage.
+        struct carriage *current = get_current_carriage(a);
+        pthread_mutex_lock(&current->enter_mutex);
+        current->passengers[current->number_of_passengers++] = a->index; // place the passenger in the carriage
+        if (current->number_of_passengers >= a->carriage_capacity)
+        {
+            *a->can_enter = 0;
+            pthread_cond_broadcast(a->can_enter_cv);
+        }
+        printf("Passenger %d entered carriage %d which currently has %d/%d people.\n",
+               a->index, *a->current_carriage, current->number_of_passengers, a->carriage_capacity);
+
+        pthread_mutex_unlock(&current->enter_mutex);
+        pthread_mutex_unlock(a->can_enter_mutex);
+
+        // 3. Press start.
+
+        // 4. Leave the carriage and write out current number of passengers in the carriage.
     }
 
-    // 2. Enter the carriage and write out current number of passengers in the carriage.
-
-
-    // 3. Press start.
-
-    // 4. Leave the carriage and write out current number of passengers in the carriage.
-
     // 5. End thread
+    printf("Passenger %d's thread is ending.\n", a->index);
 
     free(a);
     return 0;
@@ -56,19 +93,22 @@ void *passenger_thread(void *args)
 
 void *carriage_thread(void *args)
 {
-    struct thread_args *arguments = (struct thread_args *)args;
+    struct thread_args *a = (struct thread_args *)args;
 
-    // 1. Close the door.
+    while(get_number_of_rides(a) > 0)
+    {
+        // 1. Open the door.
 
-    // 2. Start the ride.
+        // 2. Close the door.
 
-    // 3. End the ride.
+        // 3. Start the ride.
 
-    // 4. Open the door.
+        // 4. End the ride.
+    }
 
     // 5. End thread.
 
-    free(arguments);
+    free(a);
     return 0;
 }
 
@@ -88,6 +128,7 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
     general_arguments->passengers = &passengers;
     general_arguments->carriages = &carriages;
     general_arguments->rides_left = &number_of_rides;
+    pthread_mutex_init(general_arguments->rides_left_mutex, NULL);
     general_arguments->carriage_capacity = carriage_capacity;
     general_arguments->index = -1;
     general_arguments->can_enter = &can_enter;
@@ -160,7 +201,9 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
 
     pthread_cond_destroy(&can_enter_cv);
     pthread_mutex_destroy(&can_enter_mutex);
+    pthread_mutex_destroy(general_arguments->rides_left_mutex);
 
+    free(general_arguments);
     free(passengers);
     free(carriages);
 }

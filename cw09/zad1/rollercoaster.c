@@ -104,7 +104,7 @@ void *passenger_thread(void *args)
         current->passengers[current->number_of_passengers++] = a->index; // place the passenger in the carriage
         int carriage_entered = *a->current_carriage;
 
-        sprintf(buffer, "Passenger %d entered carriage %d which currently has %d/%d people.\n",
+        sprintf(buffer, "Passenger %d entered carriage %d which currently has %d/%d people.",
                a->index, carriage_entered, current->number_of_passengers, a->carriage_capacity);
         print_message(buffer);
 
@@ -123,7 +123,7 @@ void *passenger_thread(void *args)
 
             // 3. Press start.
             press_start(a);
-            sprintf(buffer, "Passenger %d in carriage %d pressed \'start\'.\n", a->index, *a->current_carriage);
+            sprintf(buffer, "Passenger %d in carriage %d pressed \'start\'.", a->index, *a->current_carriage);
             print_message(buffer);
 
         }
@@ -161,7 +161,7 @@ void *passenger_thread(void *args)
     }
 
     // 5. End thread
-    sprintf(buffer, "Passenger %d's thread is ending.\n", a->index);
+    sprintf(buffer, "Passenger %d's thread is ending.", a->index);
     print_message(buffer);
 
     free(a);
@@ -172,6 +172,8 @@ void *carriage_thread(void *args)
 {
     struct thread_args *a = (struct thread_args *)args;
     char buffer[400];
+
+    struct carriage* this_carriage = get_carriage(a, a->index);
 
     while(get_number_of_rides(a) > 0)
     {
@@ -184,14 +186,22 @@ void *carriage_thread(void *args)
         pthread_mutex_unlock(a->can_enter_mutex);
 
         // 1. Open the door.
-        sprintf(buffer, "Carriage %d opens the door.\n", a->index);
+        sprintf(buffer, "Carriage %d opens the door.", a->index);
         print_message(buffer);
 
         // Allow exiting of passengers
-        pthread_mutex_lock(a->can_exit_mutex);
-        *a->can_exit = 1;
-        pthread_cond_broadcast(a->can_exit_cv);
-        pthread_mutex_unlock(a->can_exit_mutex);
+        pthread_mutex_lock(&this_carriage->can_exit_mutex);
+        this_carriage->can_exit = 1;
+        // if number passengers == 0 raise can_enter
+        if (this_carriage->number_of_passengers == 0)
+        {
+            pthread_mutex_lock(a->can_enter_mutex);
+            *a->can_enter = 1;
+            pthread_cond_broadcast(a->can_enter_cv);
+            pthread_mutex_unlock(a->can_enter_mutex);
+        }
+        pthread_cond_broadcast(&this_carriage->can_exit_cv);
+        pthread_mutex_unlock(&this_carriage->can_exit_mutex);
 
         // Allow entry of passengers
         // *a->can_enter = 1;  // TODO: change to can_exit
@@ -206,7 +216,7 @@ void *carriage_thread(void *args)
         }
         *a->start_pressed = 0;
         pthread_mutex_unlock(a->start_pressed_mutex);
-        sprintf(buffer, "Carriage %d closes the door.\n", a->index);
+        sprintf(buffer, "Carriage %d closes the door.", a->index);
         print_message(buffer);
 
         // Check if it's the last carriage
@@ -225,11 +235,15 @@ void *carriage_thread(void *args)
         else
         {
             // 3. Start the ride.
-            print_message("The ride started.\n");
+            print_message("The ride started.");
             usleep(RIDE_TIME_US);
 
             // 4. End the ride.
-            print_message("The ride ended.\n");
+            print_message("The ride ended.");
+
+            pthread_mutex_lock(a->rides_left_mutex);
+            --(*a->rides_left);
+            pthread_mutex_unlock(a->rides_left_mutex);
             
             pthread_mutex_lock(a->can_enter_mutex);
             *a->current_carriage = 0;
@@ -240,7 +254,7 @@ void *carriage_thread(void *args)
     }
 
     // 5. End thread.
-    sprintf(buffer, "The carriage %d's thread has ended.\n", a->index);
+    sprintf(buffer, "The carriage %d's thread has ended.", a->index);
     print_message(buffer);
 
     free(a);
@@ -341,9 +355,9 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
     }
 
     // Start the fun
-    *general_arguments->current_carriage = 0;
     pthread_mutex_lock(&can_enter_mutex);
-    can_enter = 1;
+    *general_arguments->current_carriage = 0;
+    // can_enter = 1;
     pthread_cond_broadcast(&can_enter_cv);
     pthread_mutex_unlock(&can_enter_mutex);
 

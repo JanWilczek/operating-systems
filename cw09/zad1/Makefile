@@ -3,7 +3,7 @@ TEMP_FLAGS=-g -Wall
 all: rollercoaster
 
 test: rollercoaster
-	./rollercoaster 20 5 2 4
+	./rollercoaster 5 2 2 3
 
 rollercoaster: main.o rollercoaster.o utils.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) -o rollercoaster main.o rollercoaster.o utils.o -pthread

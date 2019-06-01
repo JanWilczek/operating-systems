@@ -47,9 +47,15 @@ struct thread_args
     pthread_cond_t *current_carriage_cv;
     pthread_mutex_t *current_carriage_mutex;
 
+    int *carriage_full; // boolean
+    pthread_cond_t* carriage_full_cv;
+    pthread_mutex_t* carriage_full_mutex;
+
     int *start_pressed;
     pthread_cond_t *start_pressed_cv;
     pthread_mutex_t *start_pressed_mutex;
+
+    int* passenger_to_press_button;
 };
 
 /** 
@@ -137,6 +143,28 @@ void increase_carriage(struct thread_args *a)
     pthread_mutex_unlock(a->current_carriage_mutex);
 }
 
+/**
+ * Does holds any mutexes afterwards.
+ * */
+void wait_for_carriage_full(struct thread_args* a)
+{
+    pthread_mutex_lock(a->carriage_full_mutex);
+    while(!(*a->carriage_full))
+    {
+        pthread_cond_wait(a->carriage_full_cv, a->carriage_full_mutex);
+    }
+    *a->carriage_full = 0;
+    pthread_mutex_unlock(a->carriage_full_mutex);
+}
+
+/**
+ * Returns random integer from range [a. b].
+ * */
+int rand_int(int a, int b)
+{
+    return (int) (b - a) * (((float) rand()) / RAND_MAX) + a;
+}
+
 void *passenger_thread(void *args)
 {
     struct thread_args *a = (struct thread_args *)args;
@@ -174,8 +202,10 @@ void *passenger_thread(void *args)
         {
             *a->can_enter = 0;  // synchronized, because this thread holds can_enter_mutex
 
-            // 3. Press start.
-            press_start(a);
+            pthread_mutex_lock(a->carriage_full_mutex);
+            *a->carriage_full = 1;
+            pthread_cond_broadcast(a->carriage_full_cv);
+            pthread_mutex_unlock(a->carriage_full_mutex);
         }
 
         pthread_mutex_unlock(&current->enter_mutex);
@@ -185,6 +215,15 @@ void *passenger_thread(void *args)
         pthread_mutex_lock(&current->can_exit_mutex);
         while (!(current->can_exit))
         {
+            // Check if should press button
+            if (*a->passenger_to_press_button == a->index)
+            {
+                // Restore initial state
+                *a->passenger_to_press_button = -1;
+
+                // 3. Press start.
+                press_start(a);
+            }
             pthread_cond_wait(&current->can_exit_cv, &current->can_exit_mutex);
         }
         current->number_of_passengers--;
@@ -234,12 +273,29 @@ void *carriage_thread(void *args)
             pthread_cond_wait(&this_carriage->can_exit_cv, &this_carriage->can_exit_mutex);
         }
         this_carriage->can_exit = 0;
+        for (int i = 0; i < a->carriage_capacity; ++i)
+        {
+            this_carriage->passengers[i] = -1;
+        }
         pthread_mutex_unlock(&this_carriage->can_exit_mutex);
 
         // If it is not the last ride let new people in
         if (get_number_of_rides(a) > 0)
         {
+            // "Unpress" the start button
+            pthread_mutex_lock(a->start_pressed_mutex);
+            *a->start_pressed = 0;  
+            pthread_mutex_unlock(a->start_pressed_mutex);
+
             set_can_enter(a, 1);
+
+            wait_for_carriage_full(a);
+
+            // Pick random passenger to press the button - does not have to be synchronized because carriage writes, passenger reads
+            pthread_mutex_lock(&this_carriage->can_exit_mutex);
+            *a->passenger_to_press_button = this_carriage->passengers[rand_int(0, a->carriage_capacity - 1)];
+            pthread_cond_broadcast(&this_carriage->can_exit_cv);
+            pthread_mutex_unlock(&this_carriage->can_exit_mutex);            
 
             // 2. Close the door.
             pthread_mutex_lock(a->start_pressed_mutex);
@@ -247,7 +303,6 @@ void *carriage_thread(void *args)
             {
                 pthread_cond_wait(a->start_pressed_cv, a->start_pressed_mutex);
             }
-            *a->start_pressed = 0;  // TODO: move this somewhere else (e.g. before opening doors). It may cause passengers to constantly press start.
 
             sprintf(buffer, "Carriage %d closes the door.", a->index);
             print_message(buffer);
@@ -297,20 +352,30 @@ void *carriage_thread(void *args)
 
 void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity, int number_of_rides)
 {
+    srand(time(NULL));
+
     struct passenger *passengers = malloc(num_passengers * sizeof(struct passenger));
     struct carriage *carriages = malloc(num_carriages * sizeof(struct carriage));
 
     pthread_mutex_t rides_left_mutex = PTHREAD_MUTEX_INITIALIZER;
+    
+    int can_enter = 0;
     pthread_mutex_t can_enter_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t can_enter_cv = PTHREAD_COND_INITIALIZER;
+    
     int start_pressed = 0;
     pthread_mutex_t start_pressed_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t start_pressed_cv = PTHREAD_COND_INITIALIZER;
-    int can_enter = 0;
+    
+    int carriage_full = 0;
+    pthread_mutex_t carriage_full_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t carriage_full_cv = PTHREAD_COND_INITIALIZER;
 
     int current_carriage = -1;
     pthread_mutex_t current_carriage_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t current_carriage_cv = PTHREAD_COND_INITIALIZER;
+
+    int passenger_to_press_button = -1;
 
     // Prepare arguments
     struct thread_args *general_arguments = malloc(sizeof(struct thread_args));
@@ -325,12 +390,16 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
     general_arguments->can_enter = &can_enter;
     general_arguments->can_enter_cv = &can_enter_cv;
     general_arguments->can_enter_mutex = &can_enter_mutex;
+    general_arguments->carriage_full = &carriage_full;
+    general_arguments->carriage_full_mutex = &carriage_full_mutex;
+    general_arguments->carriage_full_cv = &carriage_full_cv;
     general_arguments->current_carriage = &current_carriage;
     general_arguments->current_carriage_mutex = &current_carriage_mutex;
     general_arguments->current_carriage_cv = &current_carriage_cv;
     general_arguments->start_pressed = &start_pressed;
     general_arguments->start_pressed_mutex = &start_pressed_mutex;
     general_arguments->start_pressed_cv = &start_pressed_cv;
+    general_arguments->passenger_to_press_button = &passenger_to_press_button;
 
     // Start passenger threads
     for (int i = 0; i < num_passengers; ++i)
@@ -416,6 +485,8 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
 
     pthread_cond_destroy(&start_pressed_cv);
     pthread_mutex_destroy(&start_pressed_mutex);
+    pthread_cond_destroy(&carriage_full_cv);
+    pthread_mutex_destroy(&carriage_full_mutex);
     pthread_mutex_destroy(&current_carriage_mutex);
     pthread_cond_destroy(&current_carriage_cv);
     pthread_cond_destroy(&can_enter_cv);

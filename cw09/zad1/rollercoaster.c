@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
 #define RIDE_TIME_US 100000
 
@@ -88,8 +89,14 @@ int get_number_of_rides(struct thread_args *a)
 
 void press_start(struct thread_args *a)
 {
+    char buffer[400];
+
     pthread_mutex_lock(a->start_pressed_mutex);
+
     *a->start_pressed = 1;
+    sprintf(buffer, "Passenger %d in carriage %d pressed \'start\'.", a->index, *a->current_carriage);
+    print_message(buffer);
+
     pthread_cond_broadcast(a->start_pressed_cv);
     pthread_mutex_unlock(a->start_pressed_mutex);
 }
@@ -101,7 +108,7 @@ void wait_for_can_enter(struct thread_args *a)
     {
         pthread_cond_wait(a->can_enter_cv, a->can_enter_mutex);
     }
-    pthread_mutex_unlock(a->can_enter_mutex);
+    // pthread_mutex_unlock(a->can_enter_mutex);
 }
 
 void set_can_enter(struct thread_args *a, int value)
@@ -145,6 +152,7 @@ void *passenger_thread(void *args)
         // No point in getting in if there are no more rides
         if (get_number_of_rides(a) == 0)
         {
+            pthread_mutex_unlock(a->can_enter_mutex);
             break;
         }
 
@@ -166,16 +174,15 @@ void *passenger_thread(void *args)
         }
         else if (current->number_of_passengers == a->carriage_capacity)
         {
-            set_can_enter(a, 0);
+            // set_can_enter(a, 0);
+            *a->can_enter = 0;  // synchronized, because this thread holds can_enter_mutex
 
             // 3. Press start.
             press_start(a);
-            sprintf(buffer, "Passenger %d in carriage %d pressed \'start\'.", a->index, *a->current_carriage);
-            print_message(buffer);
         }
 
         pthread_mutex_unlock(&current->enter_mutex);
-        // pthread_mutex_unlock(a->can_enter_mutex);
+        pthread_mutex_unlock(a->can_enter_mutex);
 
         // 4. Leave the carriage and write out current number of passengers in the carriage.
         pthread_mutex_lock(&current->can_exit_mutex);
@@ -189,31 +196,6 @@ void *passenger_thread(void *args)
         print_message(buffer);
         pthread_cond_broadcast(&current->can_exit_cv);
         pthread_mutex_unlock(&current->can_exit_mutex);
-
-        // if (current->number_of_passengers < 0)
-        // {
-        // FATAL ERROR
-        // fprintf(stderr, "Less than 0 passengers on carriage %d.\n", carriage_entered);
-        // exit(EXIT_FAILURE);
-        // }
-        // else if (current->number_of_passengers == 0)
-        // {
-        // current->can_exit = 0;
-        // pthread_cond_broadcast(&current->can_exit_cv);
-
-        // if (get_number_of_rides(a) > 0)
-        {
-            // pthread_mutex_lock(a->can_enter_mutex);
-            // *a->can_enter = 1;
-            // pthread_cond_broadcast(a->can_enter_cv);
-            // while(!(a->can_enter))
-            // {
-            //
-            // }
-            // pthread_mutex_unlock(a->can_enter_mutex);
-        }
-        // }
-        // pthread_mutex_unlock(&current->can_exit_mutex);
     }
 
     // 5. End thread
@@ -257,9 +239,6 @@ void *carriage_thread(void *args)
         this_carriage->can_exit = 0;
         pthread_mutex_unlock(&this_carriage->can_exit_mutex);
 
-        // if number passengers == 0 raise can_enter - for initial entry of passengers
-        // You have to set can_enter to true to unlock waiting passengers
-
         // If it is not the last ride let new people in
         if (get_number_of_rides(a) > 0)
         {
@@ -272,18 +251,23 @@ void *carriage_thread(void *args)
                 pthread_cond_wait(a->start_pressed_cv, a->start_pressed_mutex);
             }
             *a->start_pressed = 0;  // TODO: move this somewhere else (e.g. before opening doors). It may cause passengers to constantly press start.
-            pthread_mutex_unlock(a->start_pressed_mutex);
 
             sprintf(buffer, "Carriage %d closes the door.", a->index);
             print_message(buffer);
+            pthread_mutex_unlock(a->start_pressed_mutex);
         }
 
         // Check if it's the last carriage
         if (a->index < a->num_carriages - 1)
         {
             increase_carriage(a);
+
+            if (get_number_of_rides(a) == 0)
+            {
+                break;
+            }
         }
-        else if (get_number_of_rides > 0) // ride only of there are rides left
+        else if (get_number_of_rides(a) > 0) // ride only of there are rides left
         {
             // 3. Start the ride.
             print_message("The ride started.");
@@ -297,6 +281,12 @@ void *carriage_thread(void *args)
             pthread_mutex_unlock(a->rides_left_mutex);
 
             increase_carriage(a);   // will set current carriage to 0
+        }
+        else    // last carriage, no rides left
+        {
+            assert(a->index == a->num_carriages - 1);
+            assert(get_number_of_rides(a) == 0);
+            break;
         }
     }
 

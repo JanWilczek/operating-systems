@@ -403,6 +403,13 @@ void rollercoaster(int num_passengers, int num_carriages, int carriage_capacity,
     pthread_mutex_unlock(&current_carriage_mutex);
 
     // Wait for all threads to complete
+    for (int i = 0; i < num_carriages; ++i)
+    {
+        pthread_join(carriages[i].id, NULL);
+    }
+
+    // Notify passengers that all carriages stopped
+    set_can_enter(general_arguments, 1);
     for (int i = 0; i < num_passengers; ++i)
     {
         pthread_join(passengers[i].id, NULL);

@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
     };
 
     int port_number = -1;
-    const char* socket_path = NULL;
+    char* socket_path = NULL;
 
     int next_option = 0;
     while ((next_option = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1)

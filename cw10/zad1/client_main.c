@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
-#include "server.h"
+#include <string.h>
+#include "client.h"
 
 
 void print_usage(FILE* stream, const char* program_name)
@@ -26,6 +27,9 @@ int main(int argc, char* argv[])
         {NULL,          0,                  NULL, 0}
     };
 
+    const char* client_name = NULL;
+    int is_local = -1;
+    const char* server_address = NULL;
 
     int next_option = 0;
     while ((next_option = getopt_long(argc, argv, short_opts, long_opts, NULL)) != -1)
@@ -37,12 +41,28 @@ int main(int argc, char* argv[])
                 exit(EXIT_SUCCESS);
 
             case 'm':
+                client_name = optarg;
                 break;
             
             case 'c':
+                if (strcmp(optarg, "web") == 0)
+                {
+                    is_local = 0;
+                }
+                else if (strcmp(optarg, "local") == 0)
+                {
+                    is_local = 1;
+                }
+                else
+                {
+                    fprintf(stderr, "Invalid connection type.\n");
+                    print_usage(stderr, program_name);
+                    exit(EXIT_FAILURE);
+                }
                 break;
 
             case 'a':
+                server_address = optarg;
                 break;
 
             case -1:
@@ -56,14 +76,14 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (port_number == -1 || socket_path == NULL)
+    if (client_name == NULL || is_local == -1 || server_address == NULL)
     {
         fprintf(stderr, "Insufficient number of arguments.\n");
         print_usage(stderr, program_name);
         exit(EXIT_FAILURE);
     }
 
-    run_server(port_number, socket_path);
+    run_client(client_name, is_local, server_address);
 
     return EXIT_SUCCESS;
 }

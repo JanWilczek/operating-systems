@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 void server_open_connection(int port_number, const char* socket_path)
 {
@@ -36,21 +37,32 @@ void server_open_connection(int port_number, const char* socket_path)
 
     // Accept incoming connections
     int cliend_sockfd;
-    struct sockaddr_un client_address;
-    if ((cliend_sockfd = accept(socket_descriptor, (struct sockaddr *) &client_address, sizeof(struct sockaddr_un))) == -1)
+    struct sockaddr client_address;
+    socklen_t address_size;
+    if ((cliend_sockfd = accept(socket_descriptor, (struct sockaddr *) &client_address, &address_size)) == -1)
     {
         perror("accept");
     }
     else
     {
-        printf("Accepted client with address %s.\n", client_address.sun_path);
+        printf("Accepted client with address %s.\n", client_address.sa_data);
     }
     
     char buffer[200];
     ssize_t read;
-    while ((read = recvfrom(socket_descriptor, (void *) buffer, 200, 0, &client_address, sizeof(struct sockaddr_un)) > 0))
+    while ((read = recvfrom(socket_descriptor, (void *) buffer, 200, 0, &client_address, &address_size) > 0))
     {   
-        printf("Received from client %s: %s", client_address.sun_path, buffer);
+        printf("Received from client %s: %s", client_address.sa_data, buffer);
+    }
+
+    if (shutdown(socket_descriptor, SHUT_RDWR) == -1)
+    {
+        perror("shutdown");
+    }
+
+    if (close(socket_descriptor) == -1)
+    {
+        perror("close");
     }
 }
 
@@ -80,5 +92,25 @@ void client_open_connection(const char* client_name, int connection_type /*TODO*
     {
         perror("connect");
         return;
+    }
+    else
+    {
+        printf("Successfully  connected to server %s", server_address.sun_path);
+    }
+    
+    const char buffer[] = "Ala ma kota.\n";
+    for (int i = 0; i < 20; ++i)
+    {
+        sendto(socket_descriptor, (const char*) buffer, sizeof(buffer), 0, (struct sockaddr*) &server_address, sizeof(struct sockaddr_un));
+    }
+
+    if (shutdown(socket_descriptor, SHUT_RDWR) == -1)
+    {
+        perror("shutdown");
+    }
+
+    if (close(socket_descriptor) == -1)
+    {
+        perror("close");
     }
 }

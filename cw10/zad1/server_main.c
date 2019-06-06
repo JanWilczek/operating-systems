@@ -7,9 +7,9 @@
 void print_usage(FILE* stream, const char* program_name)
 {
     fprintf(stream, "Usage: %s  -n port_number -s socket_path\n"
-                    "   -h  --help               print this usage information.\n"
-                    "   -n  --port_number        the number of port to use by the server\n"
-                    "   -s  --socket_path        path to the UNIX socket\n", program_name);
+                    "   -h  --help               print this usage information\n"
+                    "   -n  --port-number        the number of port to use by the server\n"
+                    "   -s  --socket-path        path to the UNIX socket\n", program_name);
 }
 
 int main(int argc, char* argv[])
@@ -19,8 +19,8 @@ int main(int argc, char* argv[])
     const char* short_opts = "hn:s:";
     const struct option long_opts[] = {
         {"help",        no_argument,        NULL, 'h'},
-        {"port_number", required_argument,  NULL, 'n'},
-        {"socket_path", required_argument,  NULL, 's'},
+        {"port-number", required_argument,  NULL, 'n'},
+        {"socket-path", required_argument,  NULL, 's'},
         {NULL,          0,                  NULL, 0}
     };
 

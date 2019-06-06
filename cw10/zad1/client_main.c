@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <unistd.h>
 #include "client.h"
 
 
@@ -11,20 +12,20 @@ void print_usage(FILE* stream, const char* program_name)
                     "   -h  --help                              print this usage information\n"
                     "   -m  --name                              client's name\n"
                     "   -c  --connection     web |  local       the way to communicate with server: through web or local UNIX socket\n"
-                    "   -a  --server-address                    server's IPv4 address or path to the UNIX socket\n", program_name);
+                    "   -a  --server-address                    server's IPv4 address or path to the UNIX socket\n", program_name); 
 }
 
 int main(int argc, char* argv[])
 {
     const char* program_name = argv[0];
 
-    const char* short_opts = "hm;c:a:";
+    const char* short_opts = "hm:c:a:";
     const struct option long_opts[] = {
         {"help",            no_argument,        NULL, 'h'},
         {"name",            required_argument,  NULL, 'm'},
         {"connection",      required_argument,  NULL, 'c'},
         {"server-address",  required_argument,  NULL, 'a'},
-        {NULL,          0,                  NULL, 0}
+        {NULL,              0,                  NULL, 0}
     };
 
     const char* client_name = NULL;
@@ -62,6 +63,7 @@ int main(int argc, char* argv[])
                 break;
 
             case 'a':
+                // TODO: add IPv4 + port parsing
                 server_address = optarg;
                 break;
 

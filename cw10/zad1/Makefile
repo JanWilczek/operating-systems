@@ -3,7 +3,7 @@ TEMP_FLAGS=-g -Wall
 all: server client
 
 test: all
-	./server -n 9001 -s "~/socket_path"
+	./server -n 9001 -s "/tmp/df209djf89f0d98uf.socket"
 
 server: server_main.o server.o stream_networking.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) -o server server.o server_main.o stream_networking.o

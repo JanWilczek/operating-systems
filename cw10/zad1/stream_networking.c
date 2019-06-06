@@ -10,6 +10,9 @@
 
 void server_open_connection(int port_number, const char* socket_path)
 {
+    // Necessary for early process termination
+    unlink(socket_path);
+
     // Create local socket
     int socket_descriptor;
     if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
@@ -95,7 +98,7 @@ void client_open_connection(const char* client_name, int connection_type /*TODO*
     }
     else
     {
-        printf("Successfully  connected to server %s", server_address.sun_path);
+        printf("Successfully  connected to server %s\n", server_address.sun_path);
     }
     
     const char buffer[] = "Ala ma kota.\n";

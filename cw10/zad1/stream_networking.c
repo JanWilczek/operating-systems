@@ -67,6 +67,9 @@ void server_open_connection(int port_number, const char* socket_path)
     {
         perror("close");
     }
+
+    // Remove created socket
+    unlink(socket_path);
 }
 
 void client_open_connection(const char* client_name, int connection_type /*TODO*/, struct connection_data* cdata)

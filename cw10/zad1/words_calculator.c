@@ -55,7 +55,6 @@ void count_word(char *word, long *total_words, char **distinct_words, int *disti
     distinct_wordscount[i] = 1;
 }
 
-// TODO: Create proper signature so that respective values can be returned
 int wc_calculate_words(const char *filepath, struct wc_result *words_counted)
 {
     FILE *file = fopen(filepath, "r");
@@ -67,13 +66,13 @@ int wc_calculate_words(const char *filepath, struct wc_result *words_counted)
         ssize_t read;
 
         // Initialize output variables
-        long nb_words = 0;
-        int dist_wordslen = 0;
-        int *dist_wordscount = malloc(MAX_DISTINCT_WORDS * sizeof(int));
-        char **dist_words = malloc(MAX_DISTINCT_WORDS * sizeof(char *));
+        long total_words = 0;
+        int distinct_words_len = 0;
+        int *distinct_words_count = malloc(MAX_DISTINCT_WORDS * sizeof(int));
+        char **distinct_words = malloc(MAX_DISTINCT_WORDS * sizeof(char *));
         for (int i = 0; i < MAX_DISTINCT_WORDS; ++i)
         {
-            dist_words[i] = malloc(MAX_WORD_LENGTH * sizeof(char));
+            distinct_words[i] = malloc(MAX_WORD_LENGTH * sizeof(char));
         }
 
         // Actual parsing and counting
@@ -82,15 +81,15 @@ int wc_calculate_words(const char *filepath, struct wc_result *words_counted)
             const char *delimiter = " ";
             for (char *token = strtok(line, delimiter); token != NULL; token = strtok(NULL, delimiter))
             {
-                count_word(token, &nb_words, dist_words, &dist_wordslen, dist_wordscount);
+                count_word(token, &total_words, distinct_words, &distinct_words_len, distinct_words_count);
             }
         }
 
         // Pass the results
-        words_counted->total_words = nb_words;
-        words_counted->distinct_words = dist_words;
-        words_counted->distinct_words_len = dist_wordslen;
-        words_counted->distinct_words_count = dist_wordscount;
+        words_counted->total_words = total_words;
+        words_counted->distinct_words = distinct_words;
+        words_counted->distinct_words_len = distinct_words_len;
+        words_counted->distinct_words_count = distinct_words_count;
 
         // Cleanup
         free(line);

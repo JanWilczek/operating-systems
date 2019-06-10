@@ -30,4 +30,3 @@ int server_start_up(const char *socket_path);
 void server_main_loop(int socket_descriptor, struct client_data** clients);
 void server_shut_down(int socket_descriptor, const char* socket_path);
 
-void client_open_connection(const char* client_name, int connection_type /*TODO*/, struct connection_data* cdata);

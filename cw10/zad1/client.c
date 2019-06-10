@@ -1,6 +1,6 @@
 #include <string.h>
 #include "client.h"
-#include "stream_networking.h"
+#include "client_stream_networking.h"
 
 void run_client(const char* client_name, int is_local, const char* server_address)
 {

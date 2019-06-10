@@ -1,5 +1,5 @@
 #include "server.h"
-#include "stream_networking.h"
+#include "server_stream_networking.h"
 
 /* The server has following duties:
     1. Listen on web and local socket.

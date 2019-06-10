@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/un.h>
 
+#define BUFFER_SIZE 100
 #define MAX_CONNECTIONS 32
 
 /* Server-client message types */

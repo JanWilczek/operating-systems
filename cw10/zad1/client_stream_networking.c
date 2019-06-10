@@ -35,10 +35,17 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
         printf("Successfully  connected to server %s\n", server_address.sun_path);
     }
 
-    const char buffer[] = "Ala ma kota.\n";
+    const char* buffer = REGISTER;
+    ssize_t ret;
     for (int i = 0; i < 20; ++i)
     {
-        sendto(socket_descriptor, (const char *)buffer, sizeof(buffer), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un));
+        // sendto(socket_descriptor, (const char *)buffer, sizeof(buffer), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un));
+        ret = write(socket_descriptor, (const void *)buffer, strlen(buffer) + 1);
+        if (ret == -1)
+        {
+            perror("write");
+            break;
+        }
     }
 
     if (shutdown(socket_descriptor, SHUT_RDWR) == -1)

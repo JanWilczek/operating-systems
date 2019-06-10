@@ -130,7 +130,8 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
         int cliend_sockfd;
         struct sockaddr client_address;
         socklen_t address_size;
-        if ((cliend_sockfd = accept(socket_descriptor, (struct sockaddr *)&client_address, &address_size)) == -1)
+        if ((cliend_sockfd = accept(socket_descriptor, &client_address, &address_size)) == -1)
+        // if ((cliend_sockfd = accept(socket_descriptor, NULL, NULL)) == -1)
         {
             perror("accept");
             exit(EXIT_FAILURE);
@@ -138,9 +139,8 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
 
         printf("Accepted client with address %s.\n", client_address.sa_data);
 
-        const int BUFFER_SIZE = 100;
         char buffer[BUFFER_SIZE];
-        ssize_t read;
+        ssize_t ret;
 
         while (!shut_server)
         {
@@ -148,8 +148,9 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
             socklen_t recv_address_size;
 
             // Wait for next data packet
-            read = recvfrom(socket_descriptor, (void *)buffer, 200, 0, &client_recv_address, &recv_address_size);
-            if (read == -1)
+            // ret = recvfrom(socket_descriptor, (void *)buffer, BUFFER_SIZE, 0, &client_recv_address, &recv_address_size);
+            ret = read(socket_descriptor, buffer, BUFFER_SIZE);
+            if (ret == -1)
             {
                 perror("recvfrom");
                 exit(EXIT_FAILURE);
@@ -159,7 +160,7 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
             buffer[BUFFER_SIZE - 1] = 0;
             
             // For debugging purposes
-            printf("Received from client %s: %s", client_address.sa_data, buffer);
+            // printf("Received from client %s: %s", client_recv_address.sa_data, buffer);
 
             // Handle incoming commands
             if (strncmp(buffer, REGISTER, BUFFER_SIZE) == 0)

@@ -6,14 +6,51 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <signal.h>
 
+/*********** GLOBAL VARIABLES *****************/
 int shut_server;
+/**********************************************/
 
-int server_start_up(const char *socket_path)
+/*********** COMMAND HANDLING FUNCTIONS *****************/
+void handle_register(int socket_fd, const char* buffer, struct sockaddr* client_address, socklen_t address_size, struct client_data** clients)
 {
-    // Necessary for early process termination
-    unlink(socket_path);
+    for (int i = 0; i < MAX_CONNECTIONS; ++i)
+    {
+        if (clients[i] != NULL && strcmp(clients[i]->name, buffer) == 0)
+        {
+            const char* msg = REGISTERDENIED;
+            sendto(socket_fd, (void *) msg, strlen(msg) + 1, 0, client_address, address_size);
+        }        
+    }
 
+    int first_free_id;
+    for (int i = 0; i < MAX_CONNECTIONS; ++i)
+    {
+        if (clients[i] == NULL)
+        {
+            first_free_id = i;
+            break;
+        }
+    }
+
+    struct client_data* client = malloc(sizeof(struct client_data));
+    client->name = malloc(strlen(buffer) + 1);
+    strncpy(client->name, buffer, strlen(buffer) + 1);
+    client->address = malloc(address_size);
+    memcpy(client->address, client_address, address_size);
+
+    printf("Successfully registered client at id %d.\n", first_free_id);
+}
+/********************************************************/
+
+void sigint_handler(int num)
+{
+    shut_server = 1;
+}
+
+int start_up(const char *socket_path)
+{
     // Set up appropriate flag
     shut_server = 0;
 
@@ -43,7 +80,22 @@ int server_start_up(const char *socket_path)
         exit(EXIT_FAILURE);
     }
 
+    // Set up SIGINT handler
+    struct sigaction sa;
+    sa.sa_handler = sigint_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, NULL);
+
     return socket_descriptor;
+}
+
+int server_start_up(const char* socket_path)
+{
+    // Necessary for early process termination
+    unlink(socket_path);
+
+    return start_up(socket_path);
 }
 
 void shut_down(int socket_descriptor)
@@ -61,10 +113,17 @@ void shut_down(int socket_descriptor)
     }
 }
 
-void server_open_connection(int port_number, const char *socket_path)
+void server_shut_down(int socket_descriptor, const char* socket_path)
 {
-    int socket_descriptor = server_start_up(socket_path);
+    // Shut down server connection
+    shut_down(socket_descriptor);
 
+    // Remove created socket
+    unlink(socket_path);
+}
+
+void server_main_loop(int socket_descriptor, struct client_data** clients)
+{
     while (!shut_server)
     {
         // Accept incoming connections
@@ -83,14 +142,13 @@ void server_open_connection(int port_number, const char *socket_path)
         char buffer[BUFFER_SIZE];
         ssize_t read;
 
-        while (1)
+        while (!shut_server)
         {
-            int cliend_recv_sockfd;
             struct sockaddr client_recv_address;
             socklen_t recv_address_size;
 
             // Wait for next data packet
-            read = recvfrom(socket_descriptor, (void *)buffer, 200, 0, &client_address, &address_size);
+            read = recvfrom(socket_descriptor, (void *)buffer, 200, 0, &client_recv_address, &recv_address_size);
             if (read == -1)
             {
                 perror("recvfrom");
@@ -106,18 +164,20 @@ void server_open_connection(int port_number, const char *socket_path)
             // Handle incoming commands
             if (strncmp(buffer, REGISTER, BUFFER_SIZE) == 0)
             {
-                
+                handle_register(socket_descriptor, ((char*)buffer) + strlen(REGISTER) + 1, &client_recv_address, recv_address_size, clients);
             }
         
         }
     }
-
-    // Shut down server connection
-    shut_down(socket_descriptor);
-
-    // Remove created socket
-    unlink(socket_path);
 }
+
+// void server_open_connection(int port_number, const char *socket_path)
+// {
+//     int socket_descriptor = server_start_up(socket_path);
+
+   
+
+// }
 
 void client_open_connection(const char *client_name, int connection_type /*TODO*/, struct connection_data *cdata)
 {
@@ -128,13 +188,6 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
         perror("socket");
         return;
     }
-
-    // Bind socket to client's name
-    //     if (bind(socket_descriptor, , ) == -1)
-    //     {
-    //         perror("bind");
-    //         return;
-    //     }
 
     // Connect to server
     struct sockaddr_un server_address;

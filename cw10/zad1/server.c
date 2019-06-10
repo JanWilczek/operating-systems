@@ -17,12 +17,15 @@ void run_server(int port_number, char *socket_path)
     struct client_data clients[MAX_CONNECTIONS];
 
     // Open socket for connection
-    server_open_connection(port_number, socket_path);
+    int server_fd = server_start_up(socket_path);
 
     // Start client-monitoring thread
+    server_main_loop(server_fd, (struct client_data**) &clients);
 
-    // Start command parsing thread
+    // Start command parsing and computation dispatching thread
 
-    // Dispatch computation
-    
+    // Wait for threads to join
+
+    // Shut the server down   
+    server_shut_down(server_fd, socket_path);
 }

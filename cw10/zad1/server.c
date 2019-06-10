@@ -13,6 +13,9 @@
 
 void run_server(int port_number, char *socket_path)
 {
+    // Create a structure for clients' data
+    struct client_data clients[MAX_CONNECTIONS];
+
     // Open socket for connection
     server_open_connection(port_number, socket_path);
 

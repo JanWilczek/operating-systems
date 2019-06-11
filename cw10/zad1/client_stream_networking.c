@@ -35,17 +35,21 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
         printf("Successfully  connected to server %s\n", server_address.sun_path);
     }
 
-    const char* buffer = REGISTER;
+    char buffer[BUFFER_SIZE];
     ssize_t ret;
-    for (int i = 0; i < 20; ++i)
+    snprintf(buffer, BUFFER_SIZE, "%s", REGISTER);
+    // sendto(socket_descriptor, (const char *)buffer, sizeof(buffer), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un));
+    ret = write(socket_descriptor, (const void *)buffer, strlen(buffer) + 1);
+    if (ret == -1)
     {
-        // sendto(socket_descriptor, (const char *)buffer, sizeof(buffer), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un));
-        ret = write(socket_descriptor, (const void *)buffer, strlen(buffer) + 1);
-        if (ret == -1)
-        {
-            perror("write");
-            break;
-        }
+        perror("write");
+    }
+
+    snprintf(buffer, BUFFER_SIZE, "%s", UNREGISTER);
+    ret = write(socket_descriptor, (const void *)buffer, strlen(buffer) + 1);
+    if (ret == -1)
+    {
+        perror("write");
     }
 
     if (shutdown(socket_descriptor, SHUT_RDWR) == -1)

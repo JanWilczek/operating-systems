@@ -12,15 +12,24 @@
 int shut_server;
 /**********************************************/
 
+/*********** CLIENT HELPER FUNCTIONS *****************/
+void free_client(struct client_data* client)
+{
+    free(client->name);
+    free(client->address);
+    free(client);
+}
+/*****************************************************/
+
 /*********** COMMAND HANDLING FUNCTIONS *****************/
-void handle_register(int socket_fd, const char* buffer, struct sockaddr* client_address, socklen_t address_size, struct client_data** clients)
+void handle_register(int client_sockfd, const char* name, struct sockaddr* client_address, socklen_t address_size, struct client_data** clients)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
-        if (clients[i] != NULL && strcmp(clients[i]->name, buffer) == 0)
+        if (clients[i] != NULL && strcmp(clients[i]->name, name) == 0)
         {
             const char* msg = REGISTERDENIED;
-            sendto(socket_fd, (void *) msg, strlen(msg) + 1, 0, client_address, address_size);
+            sendto(client_sockfd, (void *) msg, strlen(msg) + 1, 0, client_address, address_size);
         }        
     }
 
@@ -35,12 +44,28 @@ void handle_register(int socket_fd, const char* buffer, struct sockaddr* client_
     }
 
     struct client_data* client = malloc(sizeof(struct client_data));
-    client->name = malloc(strlen(buffer) + 1);
-    strncpy(client->name, buffer, strlen(buffer) + 1);
+    client->name = malloc(strlen(name) + 1);
+    strncpy(client->name, name, strlen(name) + 1);
     client->address = malloc(address_size);
     memcpy(client->address, client_address, address_size);
 
     printf("Successfully registered client at id %d.\n", first_free_id);
+}
+
+void handle_unregister(int client_sockfd, const char* name, struct sockaddr* client_address, socklen_t address_size, struct client_data** clients)
+{
+    for (int i = 0; i < MAX_CONNECTIONS; ++i)
+    {
+        if (clients[i] != NULL && strcmp(name, clients[i]->name) == 0)
+        {
+            free_client(clients[i]);
+            clients[i] = NULL;
+            printf("Successfully unregistered client with name %s.\n", name);
+        }
+        return;
+    }
+
+    fprintf(stderr, "Cannot unregister not registered client with name %s.\n", name);
 }
 /********************************************************/
 
@@ -127,10 +152,10 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
     while (!shut_server)
     {
         // Accept incoming connections
-        int cliend_sockfd;
+        int client_sockfd;
         struct sockaddr client_address;
         socklen_t address_size;
-        if ((cliend_sockfd = accept(socket_descriptor, &client_address, &address_size)) == -1)
+        if ((client_sockfd = accept(socket_descriptor, &client_address, &address_size)) == -1)
         // if ((cliend_sockfd = accept(socket_descriptor, NULL, NULL)) == -1)
         {
             perror("accept");
@@ -148,8 +173,8 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
             socklen_t recv_address_size;
 
             // Wait for next data packet
-            // ret = recvfrom(socket_descriptor, (void *)buffer, BUFFER_SIZE, 0, &client_recv_address, &recv_address_size);
-            ret = read(socket_descriptor, buffer, BUFFER_SIZE);
+            // ret = read(client_sockfd, buffer, BUFFER_SIZE);
+            ret = recvfrom(client_sockfd, (void *)buffer, BUFFER_SIZE, 0, &client_recv_address, &recv_address_size);
             if (ret == -1)
             {
                 perror("recvfrom");
@@ -165,9 +190,13 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
             // Handle incoming commands
             if (strncmp(buffer, REGISTER, BUFFER_SIZE) == 0)
             {
-                handle_register(socket_descriptor, ((char*)buffer) + strlen(REGISTER) + 1, &client_recv_address, recv_address_size, clients);
+                // handle_register(client_sockfd, ((char*)buffer) + strlen(REGISTER) + 1, &client_recv_address, recv_address_size, clients);
             }
-        
+
+            if (strncmp(buffer, UNREGISTER, BUFFER_SIZE) == 0)
+            {
+                // handle_unregister(client_sockfd, ((char*) buffer) + strlen(UNREGISTER) + 1, &client_recv_address, recv_address_size, clients);
+            }
         }
     }
 }

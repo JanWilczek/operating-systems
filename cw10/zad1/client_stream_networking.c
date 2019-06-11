@@ -48,18 +48,18 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
     }
     else
     {
-        printf("Successfully  connected to server %s\n", server_address.sun_path);
+        printf("Successfully  connected to server at %s\n", server_address.sun_path);
     }
 
     char buffer[BUFFER_SIZE];
     ssize_t ret;
-    snprintf(buffer, BUFFER_SIZE, "%s", REGISTER);
-    // sendto(socket_descriptor, (const char *)buffer, sizeof(buffer), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un));
-    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
-    if (ret == -1)
-    {
-        perror("write");
-    }
+    // snprintf(buffer, BUFFER_SIZE, "%s", REGISTER);
+    // // sendto(socket_descriptor, (const char *)buffer, sizeof(buffer), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un));
+    // ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
+    // if (ret == -1)
+    // {
+    //     perror("write");
+    // }
 
     snprintf(buffer, BUFFER_SIZE, "%s", client_name);
     ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
@@ -68,12 +68,12 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
         perror("write");
     }
 
-    snprintf(buffer, BUFFER_SIZE, "%s", END);
-    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
-    if (ret == -1)
-    {
-        perror("write");
-    }
+    // snprintf(buffer, BUFFER_SIZE, "%s", END);
+    // ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
+    // if (ret == -1)
+    // {
+    //     perror("write");
+    // }
 
     while (!close_client)
     {
@@ -105,12 +105,12 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
         }
     }
 
-    snprintf(buffer, BUFFER_SIZE, "%s", UNREGISTER);
-    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
-    if (ret == -1)
-    {
-        perror("write");
-    }
+    // snprintf(buffer, BUFFER_SIZE, "%s", UNREGISTER);
+    // ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
+    // if (ret == -1)
+    // {
+    //     perror("write");
+    // }
 
     if (shutdown(socket_descriptor, SHUT_RDWR) == -1)
     {

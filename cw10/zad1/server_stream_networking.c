@@ -33,7 +33,7 @@ void handle_register(struct server_data *server, int client_sockfd)
     char *name_helper = name;
     int ret;
     char buffer[BUFFER_SIZE];
-    while ((ret = recv(client_sockfd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != -1 && ret != 0 && strncmp(buffer, END, BUFFER_SIZE) != 0)
+    while ((ret = recv(client_sockfd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != -1)
     {
         if (ret == 0)
         {
@@ -73,7 +73,7 @@ void handle_register(struct server_data *server, int client_sockfd)
 
     // Set up client's socket descriptor for monitoring
     struct epoll_event event_options;
-    event_options.events = EPOLLIN | EPOLLRDHUP;
+    event_options.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
     event_options.data.fd = client->sockfd;
     if (epoll_ctl(server->epoll_fd, EPOLL_CTL_ADD, client->sockfd, &event_options) == -1)
     {
@@ -81,12 +81,12 @@ void handle_register(struct server_data *server, int client_sockfd)
     }
     else
     {
-        printf("Successfully registered client at id %d.\n", first_free_id);
+        printf("Successfully registered client %s at id %d.\n", name, first_free_id);
     }
 }
 
 // void handle_unregister(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
-void handle_unregister(int client_sockfd, struct server_data* server)
+void handle_unregister(int client_sockfd, struct server_data *server)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
@@ -97,6 +97,12 @@ void handle_unregister(int client_sockfd, struct server_data* server)
             printf("Successfully unregistered client with name %s.\n", server->clients[i]->name);
             free_client(server->clients[i]);
             server->clients[i] = NULL;
+
+            if (close(client_sockfd) == -1)
+            {
+                perror("close");
+            }
+
             return;
         }
     }
@@ -186,7 +192,7 @@ void server_shut_down(struct server_data *server, const char *socket_path)
     unlink(socket_path);
 }
 
-const char* get_client_name(const struct server_data* server, int client_sockfd)
+const char *get_client_name(const struct server_data *server, int client_sockfd)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
@@ -227,10 +233,6 @@ void handle_event(struct server_data *server, struct epoll_event *event)
     {
         handle_unregister(event->data.fd, server);
     }
-    // else if (event->events & EPOLLOUT)
-    // {
-        // printf("Client %s is available for receiving.\n", get_client_name(server, event->data.fd));
-    // }
     else
     {
         fprintf(stderr, "Unused EPOLL event.\n");

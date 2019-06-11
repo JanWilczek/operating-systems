@@ -28,8 +28,14 @@ struct client_data {
     int sockfd;
 };
 
-int server_start_up(const char *socket_path);
+struct server_data{
+    int epoll_fd;
+    int sockfd;
+    struct client_data** clients;
+};
+
+int server_start_up(const char *socket_path, struct server_data* server);
 // void server_open_connection(int port_number, const char* socket_path);
-void server_main_loop(int socket_descriptor, struct client_data** clients);
-void server_shut_down(int socket_descriptor, const char* socket_path);
+void server_main_loop(struct server_data* server);
+void server_shut_down(struct server_data* server, const char* socket_path);
 

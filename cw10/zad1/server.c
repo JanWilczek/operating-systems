@@ -20,16 +20,19 @@ void run_server(int port_number, char *socket_path)
         clients[i] = NULL;
     }
 
+    struct server_data server;
+    server.clients = (struct client_data**) &clients;
+
     // Open socket for connection
-    int server_fd = server_start_up(socket_path);
+    server_start_up(socket_path, &server);
 
     // Start client-monitoring thread
-    server_main_loop(server_fd, (struct client_data**) &clients);
+    server_main_loop(&server);
 
     // Start command parsing and computation dispatching thread
 
     // Wait for threads to join
 
     // Shut the server down   
-    server_shut_down(server_fd, socket_path);
+    server_shut_down(&server, socket_path);
 }

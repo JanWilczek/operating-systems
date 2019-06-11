@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/epoll.h>
 #include <signal.h>
 
 /*********** GLOBAL VARIABLES *****************/
@@ -24,7 +25,7 @@ void free_client(struct client_data *client)
 
 /*********** COMMAND HANDLING FUNCTIONS *****************/
 // void handle_register(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
-void handle_register(int client_sockfd, struct client_data **clients)
+void handle_register(struct server_data* server, int client_sockfd)
 {
     // Retrieve client's name
     const int NAME_SIZE = 1024;
@@ -46,10 +47,9 @@ void handle_register(int client_sockfd, struct client_data **clients)
 
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
-        if (clients[i] != NULL && strcmp(clients[i]->name, name) == 0)
+        if (server->clients[i] != NULL && strcmp(server->clients[i]->name, name) == 0)
         {
             const char *msg = REGISTERDENIED;
-            // sendto(client_sockfd, (void *)msg, strlen(msg) + 1, 0, client_address, address_size);
             write(client_sockfd, msg, BUFFER_SIZE);
             return;
         }
@@ -58,7 +58,7 @@ void handle_register(int client_sockfd, struct client_data **clients)
     int first_free_id;
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
-        if (clients[i] == NULL)
+        if (server->clients[i] == NULL)
         {
             first_free_id = i;
             break;
@@ -69,11 +69,20 @@ void handle_register(int client_sockfd, struct client_data **clients)
     client->name = malloc(strlen(name) + 1);
     strncpy(client->name, name, strlen(name) + 1);
     client->sockfd = client_sockfd;
-    // client->address = malloc(address_size);
-    // memcpy(client->address, client_address, address_size);
-    clients[first_free_id] = client;
+    server->clients[first_free_id] = client;
 
-    printf("Successfully registered client at id %d.\n", first_free_id);
+    // Set up client's socket descriptor for monitoring
+    struct epoll_event event_options;
+    event_options.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP;
+    event_options.data.fd = client->sockfd;
+    if (epoll_ctl(server->epoll_fd, EPOLL_CTL_ADD, client->sockfd, &event_options) == -1)
+    {
+        perror("epoll");
+    }
+    else
+    {
+        printf("Successfully registered client at id %d.\n", first_free_id);
+    }
 }
 
 // void handle_unregister(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
@@ -140,12 +149,15 @@ int start_up(const char *socket_path)
     return socket_descriptor;
 }
 
-int server_start_up(const char *socket_path)
+int server_start_up(const char *socket_path, struct server_data* server)
 {
     // Necessary for early process termination
     unlink(socket_path);
 
-    return start_up(socket_path);
+    server->sockfd = start_up(socket_path);
+    server->epoll_fd = epoll_create1(0);
+
+    return 0;
 }
 
 void shut_down(int socket_descriptor)
@@ -163,16 +175,74 @@ void shut_down(int socket_descriptor)
     }
 }
 
-void server_shut_down(int socket_descriptor, const char *socket_path)
+void server_shut_down(struct server_data* server, const char *socket_path)
 {
     // Shut down server connection
-    shut_down(socket_descriptor);
+    shut_down(server->sockfd);
 
     // Remove created socket
     unlink(socket_path);
 }
 
-void server_main_loop(int socket_descriptor, struct client_data **clients)
+void handle_event(struct server_data* server, struct epoll_event* event)
+{
+
+}
+
+void check_sockets(struct server_data* server)
+{
+    const int MAX_EVENTS = 20;
+    struct epoll_event events_registered[MAX_EVENTS];
+
+    int num_events;
+    while ((num_events = epoll_wait(server->epoll_fd, (struct epoll_event*) events_registered, MAX_EVENTS, 0)) != 0)
+    {
+        if (num_events == -1)
+        {
+            perror("epoll_wait");
+            return;
+        }
+
+        // TODO: Handle registered events
+        for (int i = 0; i < num_events; ++i)
+        {
+            handle_event(server, &events_registered[i]);
+        }
+    }
+}
+
+void server_main_loop(struct server_data* server)
+{
+    while(!shut_server)
+    {
+        // Accept incoming connections
+        int client_sockfd;
+        struct sockaddr client_address;
+        socklen_t address_size;
+        // if ((client_sockfd = accept(server->sockfd, (struct sockaddr *) &client_address, &address_size)) == -1)
+        if ((client_sockfd = accept(server->sockfd, NULL, NULL)) == -1)
+        {
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                perror("accept");
+                exit(EXIT_FAILURE);
+            }
+
+            check_sockets(server);
+        }
+        else
+        {
+            handle_register(server, client_sockfd);
+        }
+
+        // if (!queue_is_empty(work_queue)
+        // {
+        //     dispatch_work();
+        // }
+    }
+}
+
+void server_main_loop1(struct server_data* server)
 {
     while (!shut_server)
     {
@@ -180,7 +250,7 @@ void server_main_loop(int socket_descriptor, struct client_data **clients)
         int client_sockfd;
         struct sockaddr client_address;
         socklen_t address_size;
-        if ((client_sockfd = accept(socket_descriptor, (struct sockaddr *) &client_address, &address_size)) == -1)
+        if ((client_sockfd = accept(server->sockfd, (struct sockaddr *) &client_address, &address_size)) == -1)
         // if ((client_sockfd = accept(socket_descriptor, NULL, NULL)) == -1)
         {
             if (errno != EAGAIN && errno != EWOULDBLOCK)
@@ -231,12 +301,12 @@ void server_main_loop(int socket_descriptor, struct client_data **clients)
             if (strncmp(buffer, REGISTER, BUFFER_SIZE) == 0)
             {
                 // handle_register(client_sockfd, ((char*)buffer) + strlen(REGISTER) + 1, &client_recv_address, recv_address_size, clients);
-                handle_register(client_sockfd, clients);
+                handle_register(server, client_sockfd);
             }
             else if (strncmp(buffer, UNREGISTER, BUFFER_SIZE) == 0)
             {
                 // handle_unregister(client_sockfd, ((char*) buffer) + strlen(UNREGISTER) + 1, &client_recv_address, recv_address_size, clients);
-                handle_unregister(client_sockfd, clients);
+                handle_unregister(client_sockfd, server->clients);
             }
         }
     }

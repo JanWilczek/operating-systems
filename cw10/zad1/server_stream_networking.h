@@ -23,8 +23,9 @@ struct connection_data{
 
 struct client_data {
     char* name;
-    struct sockaddr* address;
-    socklen_t address_size;
+    // struct sockaddr* address;
+    // socklen_t address_size;
+    int sockfd;
 };
 
 int server_start_up(const char *socket_path);

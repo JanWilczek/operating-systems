@@ -3,18 +3,34 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <signal.h>
 
+int close_client;
+
+void sigint_handler(int num)
+{
+    close_client = 1;
+}
 
 void client_open_connection(const char *client_name, int connection_type /*TODO*/, struct connection_data *cdata)
 {
+    close_client = 0;
+
+    // Set up SIGINT handler
+    struct sigaction sa;
+    sa.sa_handler = sigint_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, NULL);
+
     // Create local socket
     int socket_descriptor;
-    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
     {
         perror("socket");
         return;
@@ -39,14 +55,58 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
     ssize_t ret;
     snprintf(buffer, BUFFER_SIZE, "%s", REGISTER);
     // sendto(socket_descriptor, (const char *)buffer, sizeof(buffer), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un));
-    ret = write(socket_descriptor, (const void *)buffer, strlen(buffer) + 1);
+    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
     if (ret == -1)
     {
         perror("write");
     }
 
+    snprintf(buffer, BUFFER_SIZE, "%s", client_name);
+    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
+    if (ret == -1)
+    {
+        perror("write");
+    }
+
+    snprintf(buffer, BUFFER_SIZE, "%s", END);
+    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
+    if (ret == -1)
+    {
+        perror("write");
+    }
+
+    while (!close_client)
+    {
+        ret = read(socket_descriptor, buffer, BUFFER_SIZE);
+        if (ret == -1)
+        {
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                perror("read");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (ret > 0)
+        {
+            if (strncmp(buffer, REGISTERDENIED, BUFFER_SIZE) == 0)
+            {
+                fprintf(stderr, "Name already taken. Exiting.\n");
+                break;
+            }
+            else if (strncmp(buffer, COMPUTE, BUFFER_SIZE) == 0)
+            {
+                // TODO
+            }
+
+        }
+        else
+        {
+            break;
+        }
+    }
+
     snprintf(buffer, BUFFER_SIZE, "%s", UNREGISTER);
-    ret = write(socket_descriptor, (const void *)buffer, strlen(buffer) + 1);
+    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
     if (ret == -1)
     {
         perror("write");

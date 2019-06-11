@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -13,24 +14,45 @@ int shut_server;
 /**********************************************/
 
 /*********** CLIENT HELPER FUNCTIONS *****************/
-void free_client(struct client_data* client)
+void free_client(struct client_data *client)
 {
     free(client->name);
-    free(client->address);
+    // free(client->address);
     free(client);
 }
 /*****************************************************/
 
 /*********** COMMAND HANDLING FUNCTIONS *****************/
-void handle_register(int client_sockfd, const char* name, struct sockaddr* client_address, socklen_t address_size, struct client_data** clients)
+// void handle_register(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
+void handle_register(int client_sockfd, struct client_data **clients)
 {
+    // Retrieve client's name
+    const int NAME_SIZE = 1024;
+    char * name = malloc(NAME_SIZE * sizeof(char));
+    char* name_helper = name;
+    int ret;
+    char buffer[BUFFER_SIZE];
+    while((ret = read(client_sockfd, buffer, BUFFER_SIZE)) != -1 && ret != 0 && strncmp(buffer, END, BUFFER_SIZE) != 0)
+    {
+        if (ret == 0)
+        {
+            break;
+        }
+
+        strncpy(name_helper, buffer, BUFFER_SIZE);
+        name_helper += ret;
+    }
+    name_helper[0] = 0;
+
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
         if (clients[i] != NULL && strcmp(clients[i]->name, name) == 0)
         {
-            const char* msg = REGISTERDENIED;
-            sendto(client_sockfd, (void *) msg, strlen(msg) + 1, 0, client_address, address_size);
-        }        
+            const char *msg = REGISTERDENIED;
+            // sendto(client_sockfd, (void *)msg, strlen(msg) + 1, 0, client_address, address_size);
+            write(client_sockfd, msg, BUFFER_SIZE);
+            return;
+        }
     }
 
     int first_free_id;
@@ -43,16 +65,18 @@ void handle_register(int client_sockfd, const char* name, struct sockaddr* clien
         }
     }
 
-    struct client_data* client = malloc(sizeof(struct client_data));
+    struct client_data *client = malloc(sizeof(struct client_data));
     client->name = malloc(strlen(name) + 1);
     strncpy(client->name, name, strlen(name) + 1);
-    client->address = malloc(address_size);
-    memcpy(client->address, client_address, address_size);
+    client->sockfd = client_sockfd;
+    // client->address = malloc(address_size);
+    // memcpy(client->address, client_address, address_size);
+    clients[first_free_id] = client;
 
     printf("Successfully registered client at id %d.\n", first_free_id);
 }
 
-void handle_unregister(int client_sockfd, const char* name, struct sockaddr* client_address, socklen_t address_size, struct client_data** clients)
+void handle_unregister(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
@@ -61,8 +85,8 @@ void handle_unregister(int client_sockfd, const char* name, struct sockaddr* cli
             free_client(clients[i]);
             clients[i] = NULL;
             printf("Successfully unregistered client with name %s.\n", name);
+            return;
         }
-        return;
     }
 
     fprintf(stderr, "Cannot unregister not registered client with name %s.\n", name);
@@ -81,7 +105,7 @@ int start_up(const char *socket_path)
 
     // Create local socket
     int socket_descriptor;
-    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
     {
         perror("socket");
         exit(EXIT_FAILURE);
@@ -115,7 +139,7 @@ int start_up(const char *socket_path)
     return socket_descriptor;
 }
 
-int server_start_up(const char* socket_path)
+int server_start_up(const char *socket_path)
 {
     // Necessary for early process termination
     unlink(socket_path);
@@ -138,7 +162,7 @@ void shut_down(int socket_descriptor)
     }
 }
 
-void server_shut_down(int socket_descriptor, const char* socket_path)
+void server_shut_down(int socket_descriptor, const char *socket_path)
 {
     // Shut down server connection
     shut_down(socket_descriptor);
@@ -147,7 +171,7 @@ void server_shut_down(int socket_descriptor, const char* socket_path)
     unlink(socket_path);
 }
 
-void server_main_loop(int socket_descriptor, struct client_data** clients)
+void server_main_loop(int socket_descriptor, struct client_data **clients)
 {
     while (!shut_server)
     {
@@ -155,35 +179,42 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
         int client_sockfd;
         struct sockaddr client_address;
         socklen_t address_size;
-        if ((client_sockfd = accept(socket_descriptor, &client_address, &address_size)) == -1)
-        // if ((cliend_sockfd = accept(socket_descriptor, NULL, NULL)) == -1)
+        if ((client_sockfd = accept(socket_descriptor, (struct sockaddr *) &client_address, &address_size)) == -1)
+        // if ((client_sockfd = accept(socket_descriptor, NULL, NULL)) == -1)
         {
-            perror("accept");
-            exit(EXIT_FAILURE);
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                perror("accept");
+                exit(EXIT_FAILURE);
+            }
         }
 
-        printf("Accepted client with address %s.\n", client_address.sa_data);
+        // printf("Accepted client with address %s.\n", client_address.sa_data);
 
         char buffer[BUFFER_SIZE];
         ssize_t ret;
 
-        while (!shut_server)
+        while (!shut_server && client_sockfd != -1)
         {
-            struct sockaddr client_recv_address;
-            socklen_t recv_address_size;
+            // struct sockaddr client_recv_address;
+            // socklen_t recv_address_size;
 
             // Wait for next data packet
-            // ret = read(client_sockfd, buffer, BUFFER_SIZE);
-            ret = recvfrom(client_sockfd, (void *)buffer, BUFFER_SIZE, 0, &client_recv_address, &recv_address_size);
+            // ret = recvfrom(client_sockfd, (void *)buffer, BUFFER_SIZE, 0, &client_recv_address, &recv_address_size);
+            ret = read(client_sockfd, buffer, BUFFER_SIZE);
             if (ret == -1)
             {
-                perror("recvfrom");
-                exit(EXIT_FAILURE);
+                if (errno != EAGAIN && errno != EWOULDBLOCK)
+                {
+                    perror("read");
+                    exit(EXIT_FAILURE);
+                }
+                break;
             }
 
             // Ensure the buffer is null-terminated
             buffer[BUFFER_SIZE - 1] = 0;
-            
+
             // For debugging purposes
             // printf("Received from client %s: %s", client_recv_address.sa_data, buffer);
 
@@ -191,9 +222,9 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
             if (strncmp(buffer, REGISTER, BUFFER_SIZE) == 0)
             {
                 // handle_register(client_sockfd, ((char*)buffer) + strlen(REGISTER) + 1, &client_recv_address, recv_address_size, clients);
+                handle_register(client_sockfd, clients);
             }
-
-            if (strncmp(buffer, UNREGISTER, BUFFER_SIZE) == 0)
+            else if (strncmp(buffer, UNREGISTER, BUFFER_SIZE) == 0)
             {
                 // handle_unregister(client_sockfd, ((char*) buffer) + strlen(UNREGISTER) + 1, &client_recv_address, recv_address_size, clients);
             }
@@ -204,7 +235,5 @@ void server_main_loop(int socket_descriptor, struct client_data** clients)
 // void server_open_connection(int port_number, const char *socket_path)
 // {
 //     int socket_descriptor = server_start_up(socket_path);
-
-   
 
 // }

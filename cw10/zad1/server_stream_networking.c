@@ -32,7 +32,7 @@ void handle_register(int client_sockfd, struct client_data **clients)
     char* name_helper = name;
     int ret;
     char buffer[BUFFER_SIZE];
-    while((ret = read(client_sockfd, buffer, BUFFER_SIZE)) != -1 && ret != 0 && strncmp(buffer, END, BUFFER_SIZE) != 0)
+    while((ret = recv(client_sockfd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != -1 && ret != 0 && strncmp(buffer, END, BUFFER_SIZE) != 0)
     {
         if (ret == 0)
         {
@@ -76,20 +76,21 @@ void handle_register(int client_sockfd, struct client_data **clients)
     printf("Successfully registered client at id %d.\n", first_free_id);
 }
 
-void handle_unregister(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
+// void handle_unregister(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
+void handle_unregister(int client_sockfd, struct client_data **clients)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
-        if (clients[i] != NULL && strcmp(name, clients[i]->name) == 0)
+        if (clients[i] != NULL && clients[i]->sockfd == client_sockfd)
         {
+            printf("Successfully unregistered client with name %s.\n", clients[i]->name);
             free_client(clients[i]);
             clients[i] = NULL;
-            printf("Successfully unregistered client with name %s.\n", name);
             return;
         }
     }
 
-    fprintf(stderr, "Cannot unregister not registered client with name %s.\n", name);
+    fprintf(stderr, "Cannot unregister not registered client with socket_fd %d.\n", client_sockfd);
 }
 /********************************************************/
 
@@ -201,7 +202,7 @@ void server_main_loop(int socket_descriptor, struct client_data **clients)
 
             // Wait for next data packet
             // ret = recvfrom(client_sockfd, (void *)buffer, BUFFER_SIZE, 0, &client_recv_address, &recv_address_size);
-            ret = read(client_sockfd, buffer, BUFFER_SIZE);
+            ret = recv(client_sockfd, buffer, BUFFER_SIZE, MSG_DONTWAIT);
             if (ret == -1)
             {
                 if (errno != EAGAIN && errno != EWOULDBLOCK)
@@ -227,6 +228,7 @@ void server_main_loop(int socket_descriptor, struct client_data **clients)
             else if (strncmp(buffer, UNREGISTER, BUFFER_SIZE) == 0)
             {
                 // handle_unregister(client_sockfd, ((char*) buffer) + strlen(UNREGISTER) + 1, &client_recv_address, recv_address_size, clients);
+                handle_unregister(client_sockfd, clients);
             }
         }
     }

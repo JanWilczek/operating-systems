@@ -188,7 +188,15 @@ void server_main_loop(int socket_descriptor, struct client_data **clients)
                 perror("accept");
                 exit(EXIT_FAILURE);
             }
+            /* Check if no input is coming from clients */
         }
+        /* else
+        {
+            handle_new_client();
+        }*/
+        /* Check if there is work to dispatch
+            continue loop
+            */
 
         // printf("Accepted client with address %s.\n", client_address.sa_data);
 

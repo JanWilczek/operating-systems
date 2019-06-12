@@ -19,6 +19,18 @@ void free_client(struct client_data *client)
     free(client->name);
     free(client);
 }
+
+const char *get_client_name(const struct server_data *server, int client_sockfd)
+{
+    for (int i = 0; i < MAX_CONNECTIONS; ++i)
+    {
+        if (server->clients[i] != NULL && server->clients[i]->sockfd == client_sockfd)
+        {
+            return server->clients[i]->name;
+        }
+    }
+    return NULL;
+}
 /*****************************************************/
 
 /*********** COMMAND HANDLING FUNCTIONS *****************/
@@ -101,6 +113,41 @@ void handle_unregister(int client_sockfd, struct server_data *server)
 
     fprintf(stderr, "Cannot unregister not registered client with socket descriptor %d.\n", client_sockfd);
 }
+
+void handle_result(struct server_data* server, int client_sockfd)
+{
+    char buffer[BUFFER_SIZE];
+
+    read(client_sockfd, buffer, BUFFER_SIZE);
+    int task_id = atoi(buffer);
+
+    printf("Client %s has completed task %d with the following result:\n", get_client_name(server, client_sockfd), task_id);
+
+    // Receive and print the result
+    int ret;
+    while ((ret = read(client_sockfd, buffer, BUFFER_SIZE)) > 0)
+    {
+        if (strncmp(buffer, END, BUFFER_SIZE) == 0)
+        {
+            break;
+        }
+
+        printf("%s", buffer);
+    }
+}
+
+void handle_response(struct server_data* server, int client_sockfd)
+{
+    char buffer[BUFFER_SIZE];
+
+    // Determine the type of command (currently only RESULT handled)
+    read(client_sockfd, buffer, BUFFER_SIZE);
+
+    if (strncmp(buffer, RESULT, BUFFER_SIZE) == 0)
+    {
+        handle_result(server, client_sockfd);
+    }
+}
 /********************************************************/
 
 int start_up(const char *socket_path)
@@ -169,17 +216,6 @@ void server_shut_down(struct server_data *server, const char *socket_path)
     unlink(socket_path);
 }
 
-const char *get_client_name(const struct server_data *server, int client_sockfd)
-{
-    for (int i = 0; i < MAX_CONNECTIONS; ++i)
-    {
-        if (server->clients[i] != NULL && server->clients[i]->sockfd == client_sockfd)
-        {
-            return server->clients[i]->name;
-        }
-    }
-    return NULL;
-}
 
 void handle_event(struct server_data *server, struct epoll_event *event)
 {
@@ -190,25 +226,26 @@ void handle_event(struct server_data *server, struct epoll_event *event)
     }
     else if (event->events & EPOLLIN)
     {
-        printf("Client %s says:\n", get_client_name(server, event->data.fd));
+        handle_response(server, event->data.fd);
+        // printf("Client %s says:\n", get_client_name(server, event->data.fd));
 
-        int ret;
-        char buffer[BUFFER_SIZE];
-        while ((ret = recv(event->data.fd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != 0)
-        {
-            if (ret == -1)
-            {
-                if (errno != EAGAIN && errno != EWOULDBLOCK)
-                {
-                    perror("read");
-                    exit(EXIT_FAILURE);
-                }
-                break;
-            }
+        // int ret;
+        // char buffer[BUFFER_SIZE];
+        // while ((ret = recv(event->data.fd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != 0)
+        // {
+        //     if (ret == -1)
+        //     {
+        //         if (errno != EAGAIN && errno != EWOULDBLOCK)
+        //         {
+        //             perror("read");
+        //             exit(EXIT_FAILURE);
+        //         }
+        //         break;
+        //     }
 
-            // Print what the client has said.
-            fputs(buffer, stdout);
-        }
+        //     // Print what the client has said.
+        //     fputs(buffer, stdout);
+        // }
     }
     else
     {

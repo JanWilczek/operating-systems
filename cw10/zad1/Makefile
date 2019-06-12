@@ -6,7 +6,8 @@ all: server client
 test: all
 	./server -n 9001 -s $(TEST_SOCKET_NAME)
 	# ./client -m elo -c local -a /tmp/df209djf89f0d98uf.socket
-	./test_data/SampleTextFile_1000kb.txt
+	# ./test_data/SampleTextFile_1000kb.txt
+	# ./test_data/ThePickwickPapers.txt
 
 server: server_main.o server.o server_stream_networking.o thread_safe_queue.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) -o server server.o server_main.o server_stream_networking.o thread_safe_queue.o -pthread

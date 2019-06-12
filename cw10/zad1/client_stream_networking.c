@@ -18,6 +18,44 @@ void sigint_handler(int num)
     close_client = 1;
 }
 
+void send_result(int server_sockfd, int task_id, const char* filepath, struct wc_result* words_counted)
+{
+    char buffer[BUFFER_SIZE];
+
+    // Send RESULT command
+    snprintf(buffer, BUFFER_SIZE, "%s", RESULT);
+    write(server_sockfd, buffer, BUFFER_SIZE);
+
+    // Send task id
+    snprintf(buffer, BUFFER_SIZE, "%d", task_id);
+    write(server_sockfd, buffer, BUFFER_SIZE);
+
+    // Send string output
+    if (filepath)
+    {
+        snprintf(buffer, BUFFER_SIZE, "File: %s\n", filepath);
+        write(server_sockfd, buffer, BUFFER_SIZE);
+    }
+
+    snprintf(buffer, BUFFER_SIZE, "Total word count: %ld\n", words_counted->total_words);
+    write(server_sockfd, buffer, BUFFER_SIZE);
+
+    snprintf(buffer, BUFFER_SIZE, "Word:           Count:\n");
+    write(server_sockfd, buffer, BUFFER_SIZE);
+
+    for (int i = 0; i < words_counted->distinct_words_len; ++i)
+    {
+        // '-' says "align to left", '*' says "pad with spaces to the right"
+        // and 16 tells how wide the first field should be (it will be padded accordingly)
+        snprintf(buffer, BUFFER_SIZE, "%-*s  %d\n", 16, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
+        write(server_sockfd, buffer, BUFFER_SIZE);
+    }
+
+    // Write END message
+    snprintf(buffer, BUFFER_SIZE, "%s", END);
+    write(server_sockfd, buffer, BUFFER_SIZE);
+}
+
 void client_main_loop(int socket_descriptor)
 {
     char buffer[BUFFER_SIZE];
@@ -60,7 +98,8 @@ void client_main_loop(int socket_descriptor)
 
                 struct wc_result words_counted;
                 wc_calculate_words(filename, &words_counted);
-                wc_print(filename, &words_counted);
+                // wc_print(filename, &words_counted);
+                send_result(socket_descriptor, task_id, filename, &words_counted);
             }
         }
         else

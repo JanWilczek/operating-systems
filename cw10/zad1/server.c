@@ -46,7 +46,8 @@ void command_loop(struct server_data *server)
 
         // Add it to the work queue
         try_put_to_queue(&server->queue, buffer);
-        sleep(1);
+        
+        usleep(10000);
     }
 
     free(buffer);

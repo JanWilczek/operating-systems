@@ -26,6 +26,7 @@ struct connection_data{
 struct client_data {
     char* name;
     int sockfd;
+    int nb_pending_tasks;
 };
 
 struct server_data{

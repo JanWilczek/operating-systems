@@ -1,10 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-// #include <sys/shm.h>
-// #include <sys/ipc.h>
-// #include <sys/types.h>
-// #include <signal.h>
-// #include <time.h>
 #include <string.h>
 #include "thread_safe_queue.h"
 
@@ -63,6 +58,7 @@ int try_get_from_queue(thread_safe_queue_t *qinfo, char **element)
 
     *element = malloc((strlen(qinfo->entries[qinfo->last_id]) + 1) * sizeof(char));
     strcpy(*element, qinfo->entries[qinfo->last_id]);
+    free(qinfo->entries[qinfo->last_id]);
 
     if (qinfo->last_id == qinfo->first_id)
     {

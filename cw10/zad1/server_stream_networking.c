@@ -61,6 +61,7 @@ void handle_register(struct server_data *server, int client_sockfd)
     client->name = malloc(strlen(name) + 1);
     strncpy(client->name, name, strlen(name) + 1);
     client->sockfd = client_sockfd;
+    client->nb_pending_tasks = 0;
     server->clients[first_free_id] = client;
 
     // Set up client's socket descriptor for monitoring
@@ -236,6 +237,54 @@ void check_sockets(struct server_data *server)
     }
 }
 
+/** Returns -1 when no clients are connected. */
+int pick_target_client(struct server_data* server)
+{
+    int target_client_id = -1;
+    int min_pending_tasks = TASK_QUEUE_SIZE;
+    
+    for (int i = 0; i < MAX_CONNECTIONS; ++i)
+    {
+        if (server->clients[i] != NULL && server->clients[i]->nb_pending_tasks < min_pending_tasks)
+        {
+            target_client_id = i;
+            min_pending_tasks = server->clients[i]->nb_pending_tasks;
+
+            if (min_pending_tasks == 0)
+            {
+                return target_client_id;
+            }
+        }
+    }
+
+    return target_client_id;
+}
+
+void assign_task(struct server_data* server, int target_client_id)
+{
+    
+}
+
+void dispatch_work(struct server_data* server)
+{
+    while (queue_size(&server->queue) > 0)
+    {
+        char* filename;
+        try_get_from_queue(&server->queue, &filename);
+        if (filename != NULL)
+        {
+            int target_client_id = pick_target_client(server);
+            if (target_client_id == -1)
+            {
+                fprintf(stderr, "No clients connected. Cannot dispatch work.\n");
+                return;
+            }
+
+            assign_task(server, target_client_id);
+        }
+    }
+}
+
 void server_main_loop(struct server_data *server)
 {
     while (!shut_server)
@@ -259,10 +308,10 @@ void server_main_loop(struct server_data *server)
         }
 
         // Check for work to dispatch
-        // if (!queue_is_empty(work_queue)
-        // {
-        //     dispatch_work();
-        // }
+        if (queue_size(&server->queue) > 0)
+        {
+            dispatch_work(server);
+        }
 
         // Ping clients every 100 iterations
     }

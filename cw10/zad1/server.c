@@ -45,7 +45,7 @@ void command_loop(struct server_data *server)
         fgets(buffer, BUF_SIZE, stdin);
 
         // Add it to the work queue
-        try_put_to_queue(&server->queue, (char**) &buffer);
+        try_put_to_queue(&server->queue, buffer);
         sleep(1);
     }
 

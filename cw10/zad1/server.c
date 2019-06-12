@@ -10,6 +10,7 @@
     6. Ping clients.
     7. Monitor multiple descriptors.
 */
+extern int shut_server;
 
 void run_server(int port_number, char *socket_path)
 {

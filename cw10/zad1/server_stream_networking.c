@@ -30,26 +30,14 @@ void handle_register(struct server_data *server, int client_sockfd)
     // Retrieve client's name
     const int NAME_SIZE = 1024;
     char *name = malloc(NAME_SIZE * sizeof(char));
-    char *name_helper = name;
-    int ret;
     char buffer[BUFFER_SIZE];
-    // while ((ret = recv(client_sockfd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != -1)
-    // {
-    //     if (ret == 0)
-    //     {
-    //         break;
-    //     }
 
-    //     strncpy(name_helper, buffer, BUFFER_SIZE);
-    //     name_helper += ret;
-    // }
-    // name_helper[0] = 0;
-    if (read(client_sockfd, buffer, BUFFER_SIZE) == -1)
+    if (recv(client_sockfd, buffer, BUFFER_SIZE, MSG_WAITALL) == -1)
     {
         perror("read");
         return;
     }
-    strncpy(name_helper, buffer, BUFFER_SIZE);
+    strncpy(name, buffer, BUFFER_SIZE);
 
 
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
@@ -92,7 +80,6 @@ void handle_register(struct server_data *server, int client_sockfd)
     }
 }
 
-// void handle_unregister(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
 void handle_unregister(int client_sockfd, struct server_data *server)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
@@ -273,9 +260,6 @@ void server_main_loop(struct server_data *server)
     {
         // Accept incoming connections
         int client_sockfd;
-        // struct sockaddr client_address;
-        // socklen_t address_size;
-        // if ((client_sockfd = accept(server->sockfd, (struct sockaddr *) &client_address, &address_size)) == -1)
         if ((client_sockfd = accept(server->sockfd, NULL, NULL)) == -1)
         {
             if (errno != EAGAIN && errno != EWOULDBLOCK)
@@ -288,88 +272,14 @@ void server_main_loop(struct server_data *server)
         }
         else
         {
+            // A new client connected
             handle_register(server, client_sockfd);
         }
 
+        // Check for work to dispatch
         // if (!queue_is_empty(work_queue)
         // {
         //     dispatch_work();
         // }
     }
 }
-
-void server_main_loop1(struct server_data *server)
-{
-    while (!shut_server)
-    {
-        // Accept incoming connections
-        int client_sockfd;
-        struct sockaddr client_address;
-        socklen_t address_size;
-        if ((client_sockfd = accept(server->sockfd, (struct sockaddr *)&client_address, &address_size)) == -1)
-        // if ((client_sockfd = accept(socket_descriptor, NULL, NULL)) == -1)
-        {
-            if (errno != EAGAIN && errno != EWOULDBLOCK)
-            {
-                perror("accept");
-                exit(EXIT_FAILURE);
-            }
-            /* Check if no input is coming from clients */
-        }
-        /* else
-        {
-            handle_new_client();
-        }*/
-        /* Check if there is work to dispatch
-            continue loop
-            */
-
-        // printf("Accepted client with address %s.\n", client_address.sa_data);
-
-        char buffer[BUFFER_SIZE];
-        ssize_t ret;
-
-        while (!shut_server && client_sockfd != -1)
-        {
-            // struct sockaddr client_recv_address;
-            // socklen_t recv_address_size;
-
-            // Wait for next data packet
-            // ret = recvfrom(client_sockfd, (void *)buffer, BUFFER_SIZE, 0, &client_recv_address, &recv_address_size);
-            ret = recv(client_sockfd, buffer, BUFFER_SIZE, MSG_DONTWAIT);
-            if (ret == -1)
-            {
-                if (errno != EAGAIN && errno != EWOULDBLOCK)
-                {
-                    perror("read");
-                    exit(EXIT_FAILURE);
-                }
-                break;
-            }
-
-            // Ensure the buffer is null-terminated
-            buffer[BUFFER_SIZE - 1] = 0;
-
-            // For debugging purposes
-            // printf("Received from client %s: %s", client_recv_address.sa_data, buffer);
-
-            // Handle incoming commands
-            if (strncmp(buffer, REGISTER, BUFFER_SIZE) == 0)
-            {
-                // handle_register(client_sockfd, ((char*)buffer) + strlen(REGISTER) + 1, &client_recv_address, recv_address_size, clients);
-                handle_register(server, client_sockfd);
-            }
-            else if (strncmp(buffer, UNREGISTER, BUFFER_SIZE) == 0)
-            {
-                // handle_unregister(client_sockfd, ((char*) buffer) + strlen(UNREGISTER) + 1, &client_recv_address, recv_address_size, clients);
-                handle_unregister(client_sockfd, server);
-            }
-        }
-    }
-}
-
-// void server_open_connection(int port_number, const char *socket_path)
-// {
-//     int socket_descriptor = server_start_up(socket_path);
-
-// }

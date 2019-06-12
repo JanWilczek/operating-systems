@@ -260,9 +260,23 @@ int pick_target_client(struct server_data* server)
     return target_client_id;
 }
 
-void assign_task(struct server_data* server, int target_client_id)
+void assign_task(struct server_data* server, char* filename, int target_client_id)
 {
-    
+    int task_id = server->tasks_assigned++;
+    ++server->clients[target_client_id]->nb_pending_tasks;
+
+    char buffer[BUFFER_SIZE];
+
+    // Send COMPUTE command
+    sprintf(buffer, "%s", COMPUTE);
+    write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
+
+    // Send task id
+    sprintf(buffer, "%d", task_id);
+    write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
+
+    // Send filename to examine
+    write(server->clients[target_client_id]->sockfd, filename, strlen(filename) + 1);
 }
 
 void dispatch_work(struct server_data* server)
@@ -280,7 +294,11 @@ void dispatch_work(struct server_data* server)
                 return;
             }
 
-            assign_task(server, target_client_id);
+            assign_task(server, filename, target_client_id);
+        }
+        else
+        {
+            break;
         }
     }
 }

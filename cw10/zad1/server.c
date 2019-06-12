@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 /* The server has following duties:
     1. Listen on web and local socket.
     2. Handle client registration.
@@ -34,6 +37,22 @@ void *server_monitoring_thread(void *arg)
     return 0;
 }
 
+int is_file(const char* filepath)
+{
+    struct stat file_info;
+    if (stat(filepath, &file_info) == -1)
+    {
+        perror("stat");
+        return 0;
+    }
+
+    if (S_ISREG(file_info.st_mode))
+    {
+        return 1;
+    }
+    return 0;
+}
+
 void command_loop(struct server_data *server)
 {
     const int BUF_SIZE = 1024;
@@ -44,9 +63,24 @@ void command_loop(struct server_data *server)
         // Get file name to count words from
         fgets(buffer, BUF_SIZE, stdin);
 
+        // fgets is blocking; this is in case a SIGINT is received
+        if (shut_server)
+        {
+            break;
+        }
+
+        // Remove the newline character at the end
+        buffer[strlen(buffer) - 1] = '\0';
+
+        if (!is_file(buffer))
+        {
+            fprintf(stderr, "Given filename is not a valid text file.\n");
+            continue;
+        }
+
         // Add it to the work queue
         try_put_to_queue(&server->queue, buffer);
-        
+
         usleep(10000);
     }
 
@@ -75,6 +109,7 @@ void run_server(int port_number, char *socket_path)
     struct server_data server;
     server.clients = (struct client_data **)&clients;
     queue_init(&server.queue, TASK_QUEUE_SIZE);
+    server.tasks_assigned = 0;
 
     // Open socket for connection
     server_start_up(socket_path, &server);

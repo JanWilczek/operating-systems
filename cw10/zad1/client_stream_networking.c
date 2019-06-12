@@ -1,4 +1,5 @@
 #include "client_stream_networking.h"
+#include "words_calculator.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,6 +16,58 @@ int close_client;
 void sigint_handler(int num)
 {
     close_client = 1;
+}
+
+void client_main_loop(int socket_descriptor)
+{
+    char buffer[BUFFER_SIZE];
+    ssize_t ret;
+
+    while (!close_client)
+    {
+        ret = read(socket_descriptor, buffer, BUFFER_SIZE);
+        if (ret == -1)
+        {
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                perror("read");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (ret > 0)
+        {
+            if (strncmp(buffer, REGISTERDENIED, BUFFER_SIZE) == 0)
+            {
+                fprintf(stderr, "Name already taken. Exiting.\n");
+                break;
+            }
+            else if (strncmp(buffer, COMPUTE, BUFFER_SIZE) == 0)
+            {
+                // Read task id
+                read(socket_descriptor, buffer, BUFFER_SIZE);
+                int task_id = atoi(buffer);
+
+                // Read the name of the file to count words in
+                const int MAX_FILENAME_LENGTH = 1024;
+                char* filename = malloc(MAX_FILENAME_LENGTH * sizeof(char));
+                char* filename_helper = filename;
+
+                while ((ret = read(socket_descriptor, buffer, BUFFER_SIZE)) > 0)
+                {
+                    strncpy(filename_helper, buffer, ret);
+                    filename_helper += ret;
+                }
+
+                struct wc_result words_counted;
+                wc_calculate_words(filename, &words_counted);
+                wc_print(filename, &words_counted);
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
 }
 
 void client_open_connection(const char *client_name, int connection_type /*TODO*/, struct connection_data *cdata)
@@ -53,13 +106,6 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
 
     char buffer[BUFFER_SIZE];
     ssize_t ret;
-    // snprintf(buffer, BUFFER_SIZE, "%s", REGISTER);
-    // // sendto(socket_descriptor, (const char *)buffer, sizeof(buffer), 0, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un));
-    // ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
-    // if (ret == -1)
-    // {
-    //     perror("write");
-    // }
 
     snprintf(buffer, BUFFER_SIZE, "%s", client_name);
     ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
@@ -68,49 +114,8 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
         perror("write");
     }
 
-    // snprintf(buffer, BUFFER_SIZE, "%s", END);
-    // ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
-    // if (ret == -1)
-    // {
-    //     perror("write");
-    // }
-
-    while (!close_client)
-    {
-        ret = read(socket_descriptor, buffer, BUFFER_SIZE);
-        if (ret == -1)
-        {
-            if (errno != EAGAIN && errno != EWOULDBLOCK)
-            {
-                perror("read");
-                exit(EXIT_FAILURE);
-            }
-        }
-        else if (ret > 0)
-        {
-            if (strncmp(buffer, REGISTERDENIED, BUFFER_SIZE) == 0)
-            {
-                fprintf(stderr, "Name already taken. Exiting.\n");
-                break;
-            }
-            else if (strncmp(buffer, COMPUTE, BUFFER_SIZE) == 0)
-            {
-                // TODO
-            }
-
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    // snprintf(buffer, BUFFER_SIZE, "%s", UNREGISTER);
-    // ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
-    // if (ret == -1)
-    // {
-    //     perror("write");
-    // }
+    // CLIENT MAIN LOOP
+    client_main_loop(socket_descriptor);
 
     if (shutdown(socket_descriptor, SHUT_RDWR) == -1)
     {

@@ -34,10 +34,10 @@ struct server_data{
     int sockfd;
     struct client_data** clients;
     thread_safe_queue_t queue;
+    int tasks_assigned;
 };
 
 int server_start_up(const char *socket_path, struct server_data* server);
-// void server_open_connection(int port_number, const char* socket_path);
 void server_main_loop(struct server_data* server);
 void server_shut_down(struct server_data* server, const char* socket_path);
 

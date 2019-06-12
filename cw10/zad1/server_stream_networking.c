@@ -263,5 +263,7 @@ void server_main_loop(struct server_data *server)
         // {
         //     dispatch_work();
         // }
+
+        // Ping clients every 100 iterations
     }
 }

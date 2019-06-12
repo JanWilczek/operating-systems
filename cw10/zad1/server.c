@@ -25,21 +25,31 @@ void sigint_handler(int num)
     shut_server = 1;
 }
 
-void* server_monitoring_thread(void* arg)
+void *server_monitoring_thread(void *arg)
 {
-    struct server_data* server = (struct server_data*) arg;
+    struct server_data *server = (struct server_data *)arg;
 
     server_main_loop(server);
 
     return 0;
 }
 
-void command_loop(struct server_data* server)
+void command_loop(struct server_data *server)
 {
+    const int BUF_SIZE = 1024;
+    char* buffer = malloc(BUF_SIZE * sizeof(char));
+
     while (!shut_server)
     {
+        // Get file name to count words from
+        fgets(buffer, BUF_SIZE, stdin);
 
+        // Add it to the work queue
+        try_put_to_queue(&server->queue, (char**) &buffer);
+        sleep(1);
     }
+
+    free(buffer);
 }
 
 void run_server(int port_number, char *socket_path)
@@ -51,18 +61,19 @@ void run_server(int port_number, char *socket_path)
     sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL);
 
-     // Set up appropriate flag
+    // Set up appropriate flag
     shut_server = 0;
 
     // Create a structure for clients' data
-    struct client_data* clients[MAX_CONNECTIONS];
-    for (int i = 0 ; i < MAX_CONNECTIONS; ++i)
+    struct client_data *clients[MAX_CONNECTIONS];
+    for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
         clients[i] = NULL;
     }
 
     struct server_data server;
-    server.clients = (struct client_data**) &clients;
+    server.clients = (struct client_data **)&clients;
+    queue_init(&server.queue, TASK_QUEUE_SIZE);
 
     // Open socket for connection
     server_start_up(socket_path, &server);
@@ -70,7 +81,7 @@ void run_server(int port_number, char *socket_path)
     // Start client-monitoring thread
     pthread_t monitoring_thread_id;
     int ret;
-    if ((ret = pthread_create(&monitoring_thread_id, NULL, server_monitoring_thread, (void *) &server)) != 0)
+    if ((ret = pthread_create(&monitoring_thread_id, NULL, server_monitoring_thread, (void *)&server)) != 0)
     {
         fprintf(stderr, "pthread_create: %s\n", strerror(ret));
         exit(EXIT_FAILURE);
@@ -85,6 +96,6 @@ void run_server(int port_number, char *socket_path)
         fprintf(stderr, "pthread_join: %s\n", strerror(ret));
     }
 
-    // Shut the server down   
+    // Shut the server down
     server_shut_down(&server, socket_path);
 }

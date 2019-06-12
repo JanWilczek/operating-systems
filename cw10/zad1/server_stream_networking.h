@@ -2,9 +2,11 @@
 
 #include <unistd.h>
 #include <sys/un.h>
+#include "thread_safe_queue.h"
 
 #define BUFFER_SIZE 128
 #define MAX_CONNECTIONS 32
+#define TASK_QUEUE_SIZE MAX_CONNECTIONS * 8
 
 /* Server-client message types */
 #define REGISTER "REGISTER"
@@ -23,8 +25,6 @@ struct connection_data{
 
 struct client_data {
     char* name;
-    // struct sockaddr* address;
-    // socklen_t address_size;
     int sockfd;
 };
 
@@ -32,6 +32,7 @@ struct server_data{
     int epoll_fd;
     int sockfd;
     struct client_data** clients;
+    thread_safe_queue_t queue;
 };
 
 int server_start_up(const char *socket_path, struct server_data* server);

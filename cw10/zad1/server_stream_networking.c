@@ -20,16 +20,26 @@ void free_client(struct client_data *client)
     free(client);
 }
 
-const char *get_client_name(const struct server_data *server, int client_sockfd)
+int get_client_id(const struct server_data* server, int client_sockfd)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
         if (server->clients[i] != NULL && server->clients[i]->sockfd == client_sockfd)
         {
-            return server->clients[i]->name;
+            return i;
         }
     }
-    return NULL;
+    return -1;
+}
+
+const char *get_client_name(const struct server_data *server, int client_sockfd)
+{
+    int client_id = get_client_id(server, client_sockfd);
+    if (client_id == -1)
+    {
+        return NULL;
+    }
+    return server->clients[client_id]->name;
 }
 /*****************************************************/
 
@@ -134,6 +144,8 @@ void handle_result(struct server_data* server, int client_sockfd)
 
         printf("%s", buffer);
     }
+
+    --server->clients[get_client_id(server, client_sockfd)]->nb_pending_tasks;
 }
 
 void handle_response(struct server_data* server, int client_sockfd)

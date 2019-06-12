@@ -16,7 +16,7 @@
 #define RESULT "RESULT"
 #define PING "PING"
 #define PINGREPLY "PINGREPLY"
-#define END "END"
+#define END "END1248"
 
 
 struct connection_data{

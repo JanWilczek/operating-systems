@@ -8,13 +8,13 @@ test: all
 	# ./client -m elo -c local -a /tmp/df209djf89f0d98uf.socket
 
 server: server_main.o server.o server_stream_networking.o
-	gcc $(CFLAGS) $(TEMP_FLAGS) -o server server.o server_main.o server_stream_networking.o
+	gcc $(CFLAGS) $(TEMP_FLAGS) -o server server.o server_main.o server_stream_networking.o -pthread
 
 server_main.o: server_main.c server.h
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c server_main.c
 
 server.o: server.c server.h server_stream_networking.h
-	gcc $(CFLAGS) $(TEMP_FLAGS) -c server.c
+	gcc $(CFLAGS) $(TEMP_FLAGS) -c server.c -pthread
 
 client: client_main.o client.o client_stream_networking.o words_calculator.o
 	gcc $(CFLAGS) $(TEMP_FLAGS) -o client client.o client_main.o client_stream_networking.o words_calculator.o

@@ -8,23 +8,20 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
-#include <signal.h>
 
 /*********** GLOBAL VARIABLES *****************/
-int shut_server;
+extern int shut_server;
 /**********************************************/
 
 /*********** CLIENT HELPER FUNCTIONS *****************/
 void free_client(struct client_data *client)
 {
     free(client->name);
-    // free(client->address);
     free(client);
 }
 /*****************************************************/
 
 /*********** COMMAND HANDLING FUNCTIONS *****************/
-// void handle_register(int client_sockfd, const char *name, struct sockaddr *client_address, socklen_t address_size, struct client_data **clients)
 void handle_register(struct server_data *server, int client_sockfd)
 {
     // Retrieve client's name
@@ -105,16 +102,8 @@ void handle_unregister(int client_sockfd, struct server_data *server)
 }
 /********************************************************/
 
-void sigint_handler(int num)
-{
-    shut_server = 1;
-}
-
 int start_up(const char *socket_path)
 {
-    // Set up appropriate flag
-    shut_server = 0;
-
     // Create local socket
     int socket_descriptor;
     if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
@@ -140,13 +129,6 @@ int start_up(const char *socket_path)
         perror("listen");
         exit(EXIT_FAILURE);
     }
-
-    // Set up SIGINT handler
-    struct sigaction sa;
-    sa.sa_handler = sigint_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, NULL);
 
     return socket_descriptor;
 }

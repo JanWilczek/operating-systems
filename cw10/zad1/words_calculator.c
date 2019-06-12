@@ -23,6 +23,11 @@ void wc_print(const char *filepath, struct wc_result *words_counted)
 
 void count_word(char *word, long *total_words, char **distinct_words, int *distinct_wordslen, int *distinct_wordscount)
 {
+    if (word == NULL)
+    {
+        return;
+    }
+
     // Remove non-letter characters
     size_t len = strlen(word);
     while (len > 0 && !isalpha(word[len - 1]))
@@ -42,7 +47,7 @@ void count_word(char *word, long *total_words, char **distinct_words, int *disti
     int i = 0;
     for (; i < *distinct_wordslen; ++i)
     {
-        if (strcmp(word, distinct_words[i]) == 0)
+        if (strncmp(word, distinct_words[i], MAX_WORD_LENGTH) == 0)
         {
             ++distinct_wordscount[i];
             return;
@@ -53,6 +58,13 @@ void count_word(char *word, long *total_words, char **distinct_words, int *disti
     ++(*distinct_wordslen);
     strncpy(distinct_words[i], word, MAX_WORD_LENGTH);
     distinct_wordscount[i] = 1;
+
+    // Check if not exceeding max number of distinct words
+    if (*distinct_wordslen == MAX_DISTINCT_WORDS - 1)
+    {
+        fprintf(stderr, "Error: reached maximum number of distinct words.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 int wc_calculate_words(const char *filepath, struct wc_result *words_counted)

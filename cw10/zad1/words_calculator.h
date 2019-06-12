@@ -1,6 +1,6 @@
 #pragma once
 
-#define MAX_DISTINCT_WORDS 10000
+#define MAX_DISTINCT_WORDS 100000
 #define MAX_WORD_LENGTH 100
 
 struct wc_result {

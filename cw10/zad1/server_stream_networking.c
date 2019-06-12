@@ -33,17 +33,24 @@ void handle_register(struct server_data *server, int client_sockfd)
     char *name_helper = name;
     int ret;
     char buffer[BUFFER_SIZE];
-    while ((ret = recv(client_sockfd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != -1)
-    {
-        if (ret == 0)
-        {
-            break;
-        }
+    // while ((ret = recv(client_sockfd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != -1)
+    // {
+    //     if (ret == 0)
+    //     {
+    //         break;
+    //     }
 
-        strncpy(name_helper, buffer, BUFFER_SIZE);
-        name_helper += ret;
+    //     strncpy(name_helper, buffer, BUFFER_SIZE);
+    //     name_helper += ret;
+    // }
+    // name_helper[0] = 0;
+    if (read(client_sockfd, buffer, BUFFER_SIZE) == -1)
+    {
+        perror("read");
+        return;
     }
-    name_helper[0] = 0;
+    strncpy(name_helper, buffer, BUFFER_SIZE);
+
 
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
@@ -207,7 +214,11 @@ const char *get_client_name(const struct server_data *server, int client_sockfd)
 void handle_event(struct server_data *server, struct epoll_event *event)
 {
     // Handles EPOLLIN and EPOLLRDHUP
-    if (event->events & EPOLLIN)
+    if (event->events & EPOLLRDHUP)
+    {
+        handle_unregister(event->data.fd, server);
+    }
+    else if (event->events & EPOLLIN)
     {
         printf("Client %s says:\n", get_client_name(server, event->data.fd));
 
@@ -228,10 +239,6 @@ void handle_event(struct server_data *server, struct epoll_event *event)
             // Print what the client has said.
             fputs(buffer, stdout);
         }
-    }
-    else if (event->events & EPOLLRDHUP)
-    {
-        handle_unregister(event->data.fd, server);
     }
     else
     {

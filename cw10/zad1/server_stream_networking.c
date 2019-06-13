@@ -165,7 +165,7 @@ void handle_response(struct server_data *server, int client_sockfd)
 {
     char buffer[BUFFER_SIZE];
 
-    // Determine the type of command (currently only RESULT handled)
+    // Determine the type of command
     read(client_sockfd, buffer, BUFFER_SIZE);
 
     if (strncmp(buffer, RESULT, BUFFER_SIZE) == 0)
@@ -184,7 +184,6 @@ int start_up(const char *socket_path)
     // Create local socket
     int socket_descriptor;
     if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
-    // if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
     {
         perror("socket");
         exit(EXIT_FAILURE);
@@ -287,7 +286,6 @@ void handle_event(struct server_data *server, struct epoll_event *event)
     // Handles EPOLLIN and EPOLLRDHUP
     if (event->events & EPOLLRDHUP)
     {
-        //handle_unregister(event->data.fd, server);
         server->clients[get_client_id(server, event->data.fd)]->should_be_removed = 1;
     }
     else if (event->events & EPOLLIN)

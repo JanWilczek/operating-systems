@@ -109,57 +109,59 @@ void handle_unregister(struct server_data *server, int sockfd, struct sockaddr *
     }
 }
 
-void handle_result(struct server_data *server, struct sockaddr* addr, socklen_t addr_len)
+void handle_result(struct server_data *server, int sockfd, struct sockaddr* addr, socklen_t addr_len, int task_id)
 {
-    // char buffer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE];
 
-    // // read(client_sockfd, buffer, BUFFER_SIZE); ***
+    // recvfrom(sockfd, buffer, BUFFER_SIZE, 0, &addr, &addr_len);
     // int task_id = atoi(buffer);
 
-    // printf("Client %s has completed task %d with the following result:\n", get_client_name(server, client_sockfd), task_id);
+    printf("Client %s has completed task %d with the following result:\n", get_client_name(server, addr, addr_len), task_id);
 
-    // // Receive and print the result
-    // int ret;
-    // while ((ret = read(client_sockfd, buffer, BUFFER_SIZE)) > 0)
-    // {
-    //     char *is_end = strstr(buffer, END);
-    //     if (is_end != NULL)
-    //     {
-    //         is_end[0] = '\0'; // print only characters up to is_end[0]
-    //         printf("%s", buffer);
-    //         // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
-    //         printf("End of result from client %s.\n", get_client_name(server, client_sockfd));
-    //         break;
-    //     }
+    // Receive and print the result
+    int ret;
+    while ((ret = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, addr, &addr_len)) > 0)
+    {
+        // char *is_end = strstr(buffer, END);
+        // if (is_end != NULL)
+        // {
+            // is_end[0] = '\0'; // print only characters up to is_end[0]
+            // printf("%s", buffer);
+            // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
+            // printf("End of result from client %s.\n", get_client_name(server, client_sockfd));
+            // break;
+        // }
 
-    //     printf("%s", buffer);
+        printf("%s", buffer);
 
-    //     fflush(stdout);
-    //     fsync(client_sockfd);
-    // }
+        // fflush(stdout);
+        // fsync(sockfd);
+    }
 
-    // if (ret == -1)
-    // {
-    //     perror("read");
-    // }
+    if (ret == -1)
+    {
+        perror("read");
+    }
 
-    // --server->clients[get_client_id(server, addr, addr_len)]->nb_pending_tasks;
+    --server->clients[get_client_id(server, addr, addr_len)]->nb_pending_tasks;
 }
 
-void handle_response(struct server_data *server, int sockfd, struct sockaddr* addr, socklen_t addr_len)
+void handle_response(struct server_data *server, int sockfd)
 {
     char buffer[BUFFER_SIZE];
     
-    // Determine the type of command (currently only RESULT handled)
-    recvfrom(sockfd, buffer, BUFFER_SIZE, 0, addr, &addr_len);
+    // Determine the type of command
+    struct sockaddr addr;
+    socklen_t addr_len;
+    recvfrom(sockfd, buffer, BUFFER_SIZE, 0, &addr, &addr_len);
 
     if (strncmp(buffer, RESULT, BUFFER_SIZE) == 0)
     {
-        handle_result(server, addr, addr_len);
+        handle_result(server, sockfd, &addr, addr_len, atoi(buffer + strlen(RESULT)));
     }
     else if (strncmp(buffer, PINGREPLY, BUFFER_SIZE) == 0)
     {
-        server->clients[get_client_id(server, addr, addr_len)]->pinged = 0;
+        server->clients[get_client_id(server, &addr, addr_len)]->pinged = 0;
     }
 }
 /********************************************************/
@@ -250,15 +252,9 @@ void server_shut_down(struct server_data *server, const char *socket_path)
 
 void handle_event(struct server_data *server, struct epoll_event *event)
 {
-    // Handles EPOLLIN and EPOLLRDHUP
-    if (event->events & EPOLLRDHUP)
+    if (event->events & EPOLLIN)
     {
-        //handle_unregister(event->data.fd, server);
-        // server->clients[get_client_id(server, event->data.fd)]->should_be_removed = 1; ***
-    }
-    else if (event->events & EPOLLIN)
-    {
-        // handle_response(server, event->data.fd);
+        handle_response(server, event->data.fd);
     }
     else
     {

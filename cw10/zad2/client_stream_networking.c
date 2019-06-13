@@ -20,13 +20,13 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
 {
     char buffer[BUFFER_SIZE];
 
-    // Send RESULT command
-    snprintf(buffer, BUFFER_SIZE, "%s", RESULT);
+    // Send RESULT command with task id attached
+    snprintf(buffer, BUFFER_SIZE, "%s%d", RESULT, task_id);
     write(server_sockfd, buffer, BUFFER_SIZE);
 
     // Send task id
-    snprintf(buffer, BUFFER_SIZE, "%d", task_id);
-    write(server_sockfd, buffer, BUFFER_SIZE);
+    // snprintf(buffer, BUFFER_SIZE, "%d", task_id);
+    // write(server_sockfd, buffer, BUFFER_SIZE);
 
     // Send string output
     if (filepath)
@@ -48,19 +48,18 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
         snprintf(buffer, BUFFER_SIZE, "%-*s  %d\n", 25, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
         while (write(server_sockfd, buffer, BUFFER_SIZE) == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
         {}
-        
 
-        fflush(stdout);
-        fsync(server_sockfd);
+        // fflush(stdout);
+        // fsync(server_sockfd);
     }
 
     // Write END message
-    snprintf(buffer, BUFFER_SIZE, "%s", END);
-    while (write(server_sockfd, buffer, BUFFER_SIZE) == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
-    {}
+    // snprintf(buffer, BUFFER_SIZE, "%s", END);
+    // while (write(server_sockfd, buffer, BUFFER_SIZE) == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
+    // {}
 
-    fflush(stdout);
-    fsync(server_sockfd);
+    // fflush(stdout);
+    // fsync(server_sockfd);
 }
 
 void handle_compute(int socket_descriptor, int task_id)
@@ -106,7 +105,7 @@ void handle_compute(int socket_descriptor, int task_id)
     wc_print(filename, &words_counted);
     printf("Finished computation, sending result.\n");
     // send_result(socket_descriptor, task_id, filename, &words_counted);
-    printf("Result sent (WIP).\n");
+    printf("Result sent.\n");
     wc_free(&words_counted);
 }
 

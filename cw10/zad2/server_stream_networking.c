@@ -78,18 +78,7 @@ void handle_register(struct server_data *server, int sockfd, const char *client_
     client->should_be_removed = 0;
     server->clients[first_free_id] = client;
 
-    // Set up client's socket descriptor for monitoring
-    // struct epoll_event event_options;
-    // event_options.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-    // event_options.data.fd = client->sockfd;
-    // if (epoll_ctl(server->epoll_fd, EPOLL_CTL_ADD, client->sockfd, &event_options) == -1)
-    // {
-    //     perror("epoll");
-    // }
-    // else
-    // {
     printf("Successfully registered client %s at id %d.\n", client_name, first_free_id);
-    // }
 }
 
 void handle_unregister(struct server_data *server, int client_id)
@@ -420,13 +409,13 @@ void pinging_loop(struct server_data *server)
                     {
                         server->clients[i]->pinged = 1;
                         sprintf(buffer, "%s", PING);
-                        while ((ret = write(server->clients[i]->sockfd, buffer, BUFFER_SIZE)) <= 0)
+                        while ((ret = sendto(server->clients[i]->sockfd, buffer, BUFFER_SIZE, 0, server->clients[i]->addr, server->clients[i]->addr_len)) <= 0)
                         {
                             if (ret == -1)
                             {
                                 if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EDQUOT)
                                 {
-                                    perror("write");
+                                    perror("sendto");
                                     server->clients[i]->should_be_removed = 1;
                                     break;
                                 }

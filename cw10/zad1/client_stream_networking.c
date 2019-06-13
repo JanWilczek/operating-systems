@@ -22,39 +22,39 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
 
     // Send RESULT command
     snprintf(buffer, BUFFER_SIZE, "%s", RESULT);
-    write(server_sockfd, buffer, BUFFER_SIZE);
+    writen(server_sockfd, buffer, BUFFER_SIZE);
 
     // Send task id
     snprintf(buffer, BUFFER_SIZE, "%d", task_id);
-    write(server_sockfd, buffer, BUFFER_SIZE);
+    writen(server_sockfd, buffer, BUFFER_SIZE);
 
     // Send string output
     if (filepath)
     {
         snprintf(buffer, BUFFER_SIZE, "File: %s\n", filepath);
-        write(server_sockfd, buffer, BUFFER_SIZE);
+        writen(server_sockfd, buffer, BUFFER_SIZE);
     }
 
     snprintf(buffer, BUFFER_SIZE, "Total word count: %ld\n", words_counted->total_words);
-    write(server_sockfd, buffer, BUFFER_SIZE);
+    writen(server_sockfd, buffer, BUFFER_SIZE);
 
     snprintf(buffer, BUFFER_SIZE, "Word:           Count:\n");
-    write(server_sockfd, buffer, BUFFER_SIZE);
+    writen(server_sockfd, buffer, BUFFER_SIZE);
 
     for (int i = 0; i < words_counted->distinct_words_len; ++i)
     {
         // '-' says "align to left", '*' says "pad with spaces to the right"
         // and 16 tells how wide the first field should be (it will be padded accordingly)
         snprintf(buffer, BUFFER_SIZE, "%-*s  %d\n", 25, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
-        write(server_sockfd, buffer, BUFFER_SIZE);
+        writen(server_sockfd, buffer, BUFFER_SIZE);
 
         fflush(stdout);
         fsync(server_sockfd);
     }
 
-    // Write END message
+    // writen END message
     snprintf(buffer, BUFFER_SIZE, "%s", END);
-    write(server_sockfd, buffer, BUFFER_SIZE);
+    writen(server_sockfd, buffer, BUFFER_SIZE);
 
     fflush(stdout);
     fsync(server_sockfd);
@@ -215,10 +215,10 @@ void send_name(int socket_descriptor, const char *client_name)
     ssize_t ret;
 
     snprintf(buffer, BUFFER_SIZE, "%s", client_name);
-    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
+    ret = writen(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
     if (ret == -1)
     {
-        perror("write");
+        perror("writen");
     }
 }
 

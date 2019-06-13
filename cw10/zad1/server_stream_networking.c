@@ -1,4 +1,6 @@
 #include "server_stream_networking.h"
+#include "utils.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -53,7 +55,7 @@ void handle_register(struct server_data *server, int client_sockfd)
 
     if (recv(client_sockfd, buffer, BUFFER_SIZE, MSG_WAITALL) == -1)
     {
-        perror("read");
+        perror("readn");
         return;
     }
     strncpy(name, buffer, BUFFER_SIZE);
@@ -127,18 +129,18 @@ void handle_result(struct server_data *server, int client_sockfd)
 {
     char buffer[BUFFER_SIZE];
 
-    read(client_sockfd, buffer, BUFFER_SIZE);
+    readn(client_sockfd, buffer, BUFFER_SIZE);
     int task_id = atoi(buffer);
 
     printf("Client %s has completed task %d with the following result:\n", get_client_name(server, client_sockfd), task_id);
 
     // Receive and print the result
     int ret;
-    while ((ret = read(client_sockfd, buffer, BUFFER_SIZE)) > 0)
+    while ((ret = readn(client_sockfd, buffer, BUFFER_SIZE)) > 0)
     {
         if (strncmp(buffer, END, BUFFER_SIZE) == 0)
         {
-            printf("Read %s. Breaking input.\n", buffer);
+            printf("Readn %s. Breaking input.\n", buffer);
             break;
         }
 
@@ -150,7 +152,7 @@ void handle_result(struct server_data *server, int client_sockfd)
 
     if (ret == -1)
     {
-        perror("read");
+        perror("readn");
     }
 
     --server->clients[get_client_id(server, client_sockfd)]->nb_pending_tasks;
@@ -161,7 +163,7 @@ void handle_response(struct server_data *server, int client_sockfd)
     char buffer[BUFFER_SIZE];
 
     // Determine the type of command (currently only RESULT handled)
-    read(client_sockfd, buffer, BUFFER_SIZE);
+    readn(client_sockfd, buffer, BUFFER_SIZE);
 
     if (strncmp(buffer, RESULT, BUFFER_SIZE) == 0)
     {
@@ -293,7 +295,7 @@ void handle_event(struct server_data *server, struct epoll_event *event)
         //     {
         //         if (errno != EAGAIN && errno != EWOULDBLOCK)
         //         {
-        //             perror("read");
+        //             perror("readn");
         //             exit(EXIT_FAILURE);
         //         }
         //         break;

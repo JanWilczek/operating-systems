@@ -9,19 +9,15 @@
 #define TASK_QUEUE_SIZE MAX_CONNECTIONS * 8
 
 /* Server-client message types */
-#define REGISTER "REGISTER"
+// #define REGISTER "REGISTER"
 #define REGISTERDENIED "REGDEN"
-#define UNREGISTER "UNREGISTER"
+// #define UNREGISTER "UNREGISTER"
 #define COMPUTE "COMPUTE"
 #define RESULT "RESULT"
 #define PING "PING"
 #define PINGREPLY "PINGREPLY"
 #define END "1248END1248"
 
-
-struct connection_data{
-    char server_socket_path[sizeof(struct sockaddr_un) - sizeof(sa_family_t)];
-};
 
 struct client_data {
     char* name;

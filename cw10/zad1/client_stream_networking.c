@@ -50,11 +50,17 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
         // and 16 tells how wide the first field should be (it will be padded accordingly)
         snprintf(buffer, BUFFER_SIZE, "%-*s  %d\n", 16, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
         write(server_sockfd, buffer, BUFFER_SIZE);
+
+        fflush(stdout);
+        fsync(server_sockfd);
     }
 
     // Write END message
     snprintf(buffer, BUFFER_SIZE, "%s", END);
     write(server_sockfd, buffer, BUFFER_SIZE);
+
+    fflush(stdout);
+    fsync(server_sockfd);
 }
 
 void handle_compute(int socket_descriptor)

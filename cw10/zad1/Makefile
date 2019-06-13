@@ -6,6 +6,7 @@ all: server client
 test: all
 	./server -n 9001 -s $(TEST_SOCKET_NAME)
 	# ./client -m elo -c local -a /tmp/df209djf89f0d98uf.socket
+	# ./client -m elo -c web -a 0.0.0.0:9001
 	# ./test_data/SampleTextFile_1000kb.txt
 	# ./test_data/ThePickwickPapers.txt
 

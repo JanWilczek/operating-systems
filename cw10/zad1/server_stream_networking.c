@@ -144,6 +144,9 @@ void handle_result(struct server_data *server, int client_sockfd)
         }
 
         printf("%s", buffer);
+
+        fflush(stdout);
+        fsync(client_sockfd);
     }
 
     if (ret == -1)

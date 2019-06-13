@@ -116,12 +116,12 @@ void run_server(int port_number, char *socket_path)
     }
 
     // Start pinging thread
-    pthread_t pinging_thread_id;
-    if ((ret = pthread_create(&pinging_thread_id, NULL, pinging_thread, (void *)&server)) != 0)
-    {
-        fprintf(stderr, "pthread_create: %s\n", strerror(ret));
-        exit(EXIT_FAILURE);
-    }
+    // pthread_t pinging_thread_id;
+    // if ((ret = pthread_create(&pinging_thread_id, NULL, pinging_thread, (void *)&server)) != 0)
+    // {
+    //     fprintf(stderr, "pthread_create: %s\n", strerror(ret));
+    //     exit(EXIT_FAILURE);
+    // }
 
     // Start command parsing and computation dispatching thread
     command_loop(&server);
@@ -132,10 +132,10 @@ void run_server(int port_number, char *socket_path)
         fprintf(stderr, "pthread_join: %s\n", strerror(ret));
     }
 
-    if ((ret = pthread_join(pinging_thread_id, NULL)) != 0)
-    {
-        fprintf(stderr, "pthread_join: %s\n", strerror(ret));
-    }
+    // if ((ret = pthread_join(pinging_thread_id, NULL)) != 0)
+    // {
+    //     fprintf(stderr, "pthread_join: %s\n", strerror(ret));
+    // }
 
     // Shut the server down
     server_shut_down(&server, socket_path);

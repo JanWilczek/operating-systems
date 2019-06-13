@@ -168,7 +168,7 @@ int connect_and_bind_local(struct connection_data *cdata)
 {
     // Create local socket
     int socket_descriptor;
-    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
+    if ((socket_descriptor = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1)
     {
         perror("socket");
         return -1;
@@ -177,6 +177,13 @@ int connect_and_bind_local(struct connection_data *cdata)
     struct sockaddr_un server_address;
     server_address.sun_family = AF_UNIX;
     strcpy(server_address.sun_path, cdata->server_socket_path);
+
+    // Perform autobind
+    if (bind(socket_descriptor, (struct sockaddr*) &server_address, sizeof(sa_family_t)) == -1)
+    {
+        perror("bind");
+        return -1;
+    }
 
     if (connect(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un)) == -1)
     {
@@ -195,7 +202,7 @@ int connect_and_bind_inet(struct connection_data *cdata)
 {
     // Create local socket
     int socket_descriptor;
-    if ((socket_descriptor = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
+    if ((socket_descriptor = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1)
     {
         perror("socket");
         return -1;
@@ -224,7 +231,7 @@ void send_name(int socket_descriptor, const char *client_name)
     char buffer[BUFFER_SIZE];
     ssize_t ret;
 
-    snprintf(buffer, BUFFER_SIZE, "%s", client_name);
+    snprintf(buffer, BUFFER_SIZE, "%s%s", REGISTER, client_name);
     ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
     if (ret == -1)
     {
@@ -255,10 +262,10 @@ int connect_to_server(int is_local, struct connection_data *cdata)
 
 void disconnect_from_server(int socket_descriptor)
 {
-    if (shutdown(socket_descriptor, SHUT_RDWR) == -1)
+    // TODO: Add unregistration
+    if (send(socket_descriptor, UNREGISTER, strlen(UNREGISTER) + 1, 0) < 0)
     {
-        perror("shutdown");
-        exit(EXIT_FAILURE);
+        perror("send");
     }
 
     if (close(socket_descriptor) == -1)

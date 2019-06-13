@@ -9,9 +9,9 @@
 #define TASK_QUEUE_SIZE MAX_CONNECTIONS * 8
 
 /* Server-client message types */
-// #define REGISTER "REGISTER"
+#define REGISTER "REGISTER"
 #define REGISTERDENIED "REGDEN"
-// #define UNREGISTER "UNREGISTER"
+#define UNREGISTER "UNREGISTER"
 #define COMPUTE "COMPUTE"
 #define RESULT "RESULT"
 #define PING "PING"
@@ -22,6 +22,8 @@
 struct client_data {
     char* name;
     int sockfd;
+    struct sockaddr* addr;
+    socklen_t addr_len;
     int nb_pending_tasks;
 
     int should_be_removed;

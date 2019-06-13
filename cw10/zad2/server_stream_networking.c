@@ -17,14 +17,15 @@ extern int shut_server;
 void free_client(struct client_data *client)
 {
     free(client->name);
+    free(client->addr);
     free(client);
 }
 
-int get_client_id(const struct server_data *server, int client_sockfd)
+int get_client_id(const struct server_data *server, struct sockaddr *addr, socklen_t addr_len)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
-        if (server->clients[i] != NULL && server->clients[i]->sockfd == client_sockfd)
+        if (server->clients[i] != NULL && server->clients[i]->addr_len == addr_len && memcmp(server->clients[i]->addr, addr, addr_len))
         {
             return i;
         }
@@ -32,9 +33,9 @@ int get_client_id(const struct server_data *server, int client_sockfd)
     return -1;
 }
 
-const char *get_client_name(const struct server_data *server, int client_sockfd)
+const char *get_client_name(const struct server_data *server, struct sockaddr *addr, socklen_t addr_len)
 {
-    int client_id = get_client_id(server, client_sockfd);
+    int client_id = get_client_id(server, addr, addr_len);
     if (client_id == -1)
     {
         return NULL;
@@ -44,26 +45,14 @@ const char *get_client_name(const struct server_data *server, int client_sockfd)
 /*****************************************************/
 
 /*********** COMMAND HANDLING FUNCTIONS *****************/
-void handle_register(struct server_data *server, int client_sockfd)
+void handle_register(struct server_data *server, int sockfd, const char *client_name, struct sockaddr *addr, socklen_t addr_len)
 {
-    // Retrieve client's name
-    const int NAME_SIZE = 1024;
-    char *name = malloc(NAME_SIZE * sizeof(char));
-    char buffer[BUFFER_SIZE];
-
-    if (recv(client_sockfd, buffer, BUFFER_SIZE, MSG_WAITALL) == -1)
-    {
-        perror("read");
-        return;
-    }
-    strncpy(name, buffer, BUFFER_SIZE);
-
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
-        if (server->clients[i] != NULL && strcmp(server->clients[i]->name, name) == 0)
+        if (server->clients[i] != NULL && strcmp(server->clients[i]->name, client_name) == 0)
         {
             const char *msg = REGISTERDENIED;
-            write(client_sockfd, msg, BUFFER_SIZE);
+            sendto(sockfd, msg, BUFFER_SIZE, 0, addr, addr_len);
             return;
         }
     }
@@ -79,102 +68,98 @@ void handle_register(struct server_data *server, int client_sockfd)
     }
 
     struct client_data *client = malloc(sizeof(struct client_data));
-    client->name = malloc(strlen(name) + 1);
-    strncpy(client->name, name, strlen(name) + 1);
-    client->sockfd = client_sockfd;
+    client->name = malloc(strlen(client_name) + 1);
+    strncpy(client->name, client_name, strlen(client_name) + 1);
+    client->sockfd = sockfd;
+    client->addr = malloc(addr_len);
+    memcpy(client->addr, addr, addr_len);
+    client->addr_len = addr_len;
     client->nb_pending_tasks = 0;
     client->should_be_removed = 0;
     server->clients[first_free_id] = client;
 
     // Set up client's socket descriptor for monitoring
-    struct epoll_event event_options;
-    event_options.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
-    event_options.data.fd = client->sockfd;
-    if (epoll_ctl(server->epoll_fd, EPOLL_CTL_ADD, client->sockfd, &event_options) == -1)
+    // struct epoll_event event_options;
+    // event_options.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+    // event_options.data.fd = client->sockfd;
+    // if (epoll_ctl(server->epoll_fd, EPOLL_CTL_ADD, client->sockfd, &event_options) == -1)
+    // {
+    //     perror("epoll");
+    // }
+    // else
+    // {
+    printf("Successfully registered client %s at id %d.\n", client_name, first_free_id);
+    // }
+}
+
+void handle_unregister(struct server_data *server, int sockfd, struct sockaddr *addr, socklen_t addr_len)
+{
+    int i = get_client_id(server, addr, addr_len);
+    if (i >= 0)
     {
-        perror("epoll");
+        // struct epoll_event event;
+        // epoll_ctl(server->epoll_fd, EPOLL_CTL_DEL, server->clients[i]->sockfd, &event); // event must be non-null due to a bug
+        printf("Successfully unregistered client with name %s.\n", server->clients[i]->name);
+        free_client(server->clients[i]);
+        server->clients[i] = NULL;
     }
     else
     {
-        printf("Successfully registered client %s at id %d.\n", name, first_free_id);
+        fprintf(stderr, "Cannot unregister not registered client with given address.\n");
     }
 }
 
-void handle_unregister(int client_sockfd, struct server_data *server)
+void handle_result(struct server_data *server, struct sockaddr* addr, socklen_t addr_len)
 {
-    for (int i = 0; i < MAX_CONNECTIONS; ++i)
-    {
-        if (server->clients[i] != NULL && server->clients[i]->sockfd == client_sockfd)
-        {
-            struct epoll_event event;
-            epoll_ctl(server->epoll_fd, EPOLL_CTL_DEL, server->clients[i]->sockfd, &event); // event must be non-null due to a bug
-            printf("Successfully unregistered client with name %s.\n", server->clients[i]->name);
-            free_client(server->clients[i]);
-            server->clients[i] = NULL;
+    // char buffer[BUFFER_SIZE];
 
-            if (close(client_sockfd) == -1)
-            {
-                perror("close");
-            }
+    // // read(client_sockfd, buffer, BUFFER_SIZE); ***
+    // int task_id = atoi(buffer);
 
-            return;
-        }
-    }
+    // printf("Client %s has completed task %d with the following result:\n", get_client_name(server, client_sockfd), task_id);
 
-    fprintf(stderr, "Cannot unregister not registered client with socket descriptor %d.\n", client_sockfd);
+    // // Receive and print the result
+    // int ret;
+    // while ((ret = read(client_sockfd, buffer, BUFFER_SIZE)) > 0)
+    // {
+    //     char *is_end = strstr(buffer, END);
+    //     if (is_end != NULL)
+    //     {
+    //         is_end[0] = '\0'; // print only characters up to is_end[0]
+    //         printf("%s", buffer);
+    //         // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
+    //         printf("End of result from client %s.\n", get_client_name(server, client_sockfd));
+    //         break;
+    //     }
+
+    //     printf("%s", buffer);
+
+    //     fflush(stdout);
+    //     fsync(client_sockfd);
+    // }
+
+    // if (ret == -1)
+    // {
+    //     perror("read");
+    // }
+
+    // --server->clients[get_client_id(server, addr, addr_len)]->nb_pending_tasks;
 }
 
-void handle_result(struct server_data *server, int client_sockfd)
-{
-    char buffer[BUFFER_SIZE];
-
-    read(client_sockfd, buffer, BUFFER_SIZE);
-    int task_id = atoi(buffer);
-
-    printf("Client %s has completed task %d with the following result:\n", get_client_name(server, client_sockfd), task_id);
-
-    // Receive and print the result
-    int ret;
-    while ((ret = read(client_sockfd, buffer, BUFFER_SIZE)) > 0)
-    {
-        char *is_end = strstr(buffer, END);
-        if (is_end != NULL)
-        {
-            is_end[0] = '\0'; // print only characters up to is_end[0]
-            printf("%s", buffer);
-            // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
-            printf("End of result from client %s.\n", get_client_name(server, client_sockfd));
-            break;
-        }
-
-        printf("%s", buffer);
-
-        fflush(stdout);
-        fsync(client_sockfd);
-    }
-
-    if (ret == -1)
-    {
-        perror("read");
-    }
-
-    --server->clients[get_client_id(server, client_sockfd)]->nb_pending_tasks;
-}
-
-void handle_response(struct server_data *server, int client_sockfd)
+void handle_response(struct server_data *server, int sockfd, struct sockaddr* addr, socklen_t addr_len)
 {
     char buffer[BUFFER_SIZE];
-
+    
     // Determine the type of command (currently only RESULT handled)
-    read(client_sockfd, buffer, BUFFER_SIZE);
+    recvfrom(sockfd, buffer, BUFFER_SIZE, 0, addr, &addr_len);
 
     if (strncmp(buffer, RESULT, BUFFER_SIZE) == 0)
     {
-        handle_result(server, client_sockfd);
+        handle_result(server, addr, addr_len);
     }
     else if (strncmp(buffer, PINGREPLY, BUFFER_SIZE) == 0)
     {
-        server->clients[get_client_id(server, client_sockfd)]->pinged = 0;
+        server->clients[get_client_id(server, addr, addr_len)]->pinged = 0;
     }
 }
 /********************************************************/
@@ -183,8 +168,7 @@ int start_up(const char *socket_path)
 {
     // Create local socket
     int socket_descriptor;
-    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
-    // if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+    if ((socket_descriptor = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1)
     {
         perror("socket");
         exit(EXIT_FAILURE);
@@ -201,13 +185,6 @@ int start_up(const char *socket_path)
         exit(EXIT_FAILURE);
     }
 
-    // Listen for client connections
-    if (listen(socket_descriptor, MAX_CONNECTIONS / 2) == -1)
-    {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-
     return socket_descriptor;
 }
 
@@ -215,7 +192,7 @@ int start_up_inet(int port_number)
 {
     // Create local socket
     int socket_descriptor;
-    if ((socket_descriptor = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
+    if ((socket_descriptor = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)) == -1)
     {
         perror("socket");
         exit(EXIT_FAILURE);
@@ -232,13 +209,6 @@ int start_up_inet(int port_number)
     if (bind(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_in)) == -1)
     {
         perror("bind");
-        exit(EXIT_FAILURE);
-    }
-
-    // Listen for client connections
-    if (listen(socket_descriptor, MAX_CONNECTIONS / 2) == -1)
-    {
-        perror("listen");
         exit(EXIT_FAILURE);
     }
 
@@ -259,12 +229,6 @@ int server_start_up(const char *socket_path, struct server_data *server, int por
 
 void shut_down(int socket_descriptor)
 {
-    if (shutdown(socket_descriptor, SHUT_RDWR) == -1)
-    {
-        perror("shutdown");
-        exit(EXIT_FAILURE);
-    }
-
     if (close(socket_descriptor) == -1)
     {
         perror("close");
@@ -274,6 +238,8 @@ void shut_down(int socket_descriptor)
 
 void server_shut_down(struct server_data *server, const char *socket_path)
 {
+    // TODO: Add sending messages to clients that server is going down
+
     // Shut down server connection
     shut_down(server->sockfd);
     shut_down(server->inet_sockfd);
@@ -288,11 +254,11 @@ void handle_event(struct server_data *server, struct epoll_event *event)
     if (event->events & EPOLLRDHUP)
     {
         //handle_unregister(event->data.fd, server);
-        server->clients[get_client_id(server, event->data.fd)]->should_be_removed = 1;
+        // server->clients[get_client_id(server, event->data.fd)]->should_be_removed = 1; ***
     }
     else if (event->events & EPOLLIN)
     {
-        handle_response(server, event->data.fd);
+        // handle_response(server, event->data.fd);
     }
     else
     {
@@ -393,19 +359,20 @@ void dispatch_work(struct server_data *server)
 void examine_socket(struct server_data *server, int server_sockfd)
 {
     // Accept incoming connections
-    int client_sockfd;
-    if ((client_sockfd = accept(server_sockfd, NULL, NULL)) == -1)
+    struct sockaddr addr;
+    socklen_t addr_len;
+    char buffer[BUFFER_SIZE];
+    if (recvfrom(server_sockfd, buffer, BUFFER_SIZE, 0, &addr, &addr_len) > 0)
     {
-        if (errno != EAGAIN && errno != EWOULDBLOCK)
+        if (strncmp(buffer, REGISTER, strlen(REGISTER)) == 0)
         {
-            perror("accept");
-            exit(EXIT_FAILURE);
+            // A new client connected
+            handle_register(server, server_sockfd, buffer + strlen(REGISTER) /* client name */, &addr, addr_len);
         }
-    }
-    else
-    {
-        // A new client connected
-        handle_register(server, client_sockfd);
+        else if (strncmp(buffer, UNREGISTER, strlen(UNREGISTER)) == 0)
+        {
+            handle_unregister(server, server_sockfd, &addr, addr_len);
+        }
     }
 }
 
@@ -467,7 +434,7 @@ void pinging_loop(struct server_data *server)
 
                 if (server->clients[i]->should_be_removed)
                 {
-                    handle_unregister(server->clients[i]->sockfd, server);
+                    handle_unregister(server, server->clients[i]->sockfd, server->clients[i]->addr, server->clients[i]->addr_len);
                 }
             }
         }

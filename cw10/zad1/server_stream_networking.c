@@ -8,7 +8,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
-#include <netinet/in.h>
 
 /*********** GLOBAL VARIABLES *****************/
 extern int shut_server;
@@ -219,6 +218,7 @@ int start_up_inet(int port_number)
     struct in_addr address;
     address.s_addr = INADDR_ANY;
     server_address.sin_addr = address;
+    server_address.sin_port = htons(port_number);
 
     if (bind(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_in)) == -1)
     {

@@ -17,7 +17,7 @@ void wc_print(const char *filepath, struct wc_result *words_counted)
     {
         // '-' says "align to left", '*' says "pad with spaces to the right"
         // and 16 tells how wide the first field should be (it will be padded accordingly)
-        printf("%-*s  %d\n", 16, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
+        printf("%-*s  %d\n", 25, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
     }
 }
 
@@ -34,6 +34,10 @@ void count_word(char *word, long *total_words, char **distinct_words, int *disti
     {
         word[len - 1] = '\0';
         --len;
+    }
+    while ((len = strlen(word)) > 0 && !isalpha(word[0]))
+    {
+        ++word;
     }
     if (len == 0)
     {

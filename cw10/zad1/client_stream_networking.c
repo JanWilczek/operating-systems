@@ -7,10 +7,13 @@
 #include <string.h>
 #include <errno.h>
 
+#define _SVID_SOURCE
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <arpa/inet.h>
+
 
 int close_client;
 
@@ -48,7 +51,7 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
     {
         // '-' says "align to left", '*' says "pad with spaces to the right"
         // and 16 tells how wide the first field should be (it will be padded accordingly)
-        snprintf(buffer, BUFFER_SIZE, "%-*s  %d\n", 16, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
+        snprintf(buffer, BUFFER_SIZE, "%-*s  %d\n", 25, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
         write(server_sockfd, buffer, BUFFER_SIZE);
 
         fflush(stdout);
@@ -69,7 +72,7 @@ void handle_compute(int socket_descriptor)
     char buffer[BUFFER_SIZE];
 
     // Read task id
-    read(socket_descriptor, buffer, BUFFER_SIZE);
+    recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL);
     int task_id = atoi(buffer);
     // printf("Received: %s\n", buffer);
 
@@ -78,7 +81,7 @@ void handle_compute(int socket_descriptor)
     char *filename = malloc(MAX_FILENAME_LENGTH * sizeof(char));
     char *filename_helper = filename;
 
-    while ((ret = read(socket_descriptor, buffer, BUFFER_SIZE)) > 0)
+    while ((ret = recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL)) > 0)
     {
         strncpy(filename_helper, buffer, ret);
         filename_helper += ret;
@@ -110,7 +113,8 @@ void client_main_loop(int socket_descriptor)
             if (errno != EAGAIN && errno != EWOULDBLOCK)
             {
                 perror("read");
-                exit(EXIT_FAILURE);
+                // exit(EXIT_FAILURE);
+                return;
             }
         }
         else if (ret > 0)
@@ -122,7 +126,7 @@ void client_main_loop(int socket_descriptor)
             }
             else if (strncmp(buffer, COMPUTE, BUFFER_SIZE) == 0)
             {
-                // printf("Received: %s\n", buffer);
+                printf("Received: %s\n", buffer);
 
                 // This is why everyone should love C. These guys below make sure that the filename later on
                 // is received in the right order. I mean it's obvious right? What's even more hilarious
@@ -140,7 +144,62 @@ void client_main_loop(int socket_descriptor)
     }
 }
 
-void client_open_connection(const char *client_name, int connection_type /*TODO*/, struct connection_data *cdata)
+int connect_and_bind_local(struct connection_data* cdata)
+{
+    // Create local socket
+    int socket_descriptor;
+    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM/* | SOCK_NONBLOCK */, 0)) == -1)
+    {
+        perror("socket");
+        return -1;
+    }
+
+    struct sockaddr_un server_address;
+    server_address.sun_family = AF_UNIX;
+    strcpy(server_address.sun_path, cdata->server_socket_path);
+
+    if (connect(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un)) == -1)
+    {
+        perror("connect");
+        return -1;
+    }
+    else
+    {
+        printf("Successfully  connected to server at %s\n", server_address.sun_path);
+    }
+
+    return socket_descriptor;
+}
+
+int connect_and_bind_inet(struct connection_data* cdata)
+{
+     // Create local socket
+    int socket_descriptor;
+    if ((socket_descriptor = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
+    {
+        perror("socket");
+        return -1;
+    }
+
+    struct sockaddr_in server_address;
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = cdata->server_ip_address.s_addr;
+    server_address.sin_port = cdata->server_port_number;
+
+    if (connect(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un)) == -1 && errno != EINPROGRESS)
+    {
+        perror("connect");
+        return -1;
+    }
+    else
+    {
+        printf("Successfully  connected to server at %s:%hd\n", inet_ntoa(server_address.sin_addr), ntohs(server_address.sin_port));
+    }
+
+    return socket_descriptor;
+}
+
+void client_open_connection(const char *client_name, int is_local, struct connection_data *cdata)
 {
     close_client = 0;
 
@@ -150,29 +209,23 @@ void client_open_connection(const char *client_name, int connection_type /*TODO*
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL);
-
-    // Create local socket
-    int socket_descriptor;
-    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
-    {
-        perror("socket");
-        return;
-    }
-
+    
     // Connect to server
-    struct sockaddr_un server_address;
-    server_address.sun_family = AF_UNIX;
-    strcpy(server_address.sun_path, cdata->server_socket_path);
-
-    if (connect(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un)) == -1)
+    int socket_descriptor;
+    if (is_local)
     {
-        perror("connect");
-        return;
+        socket_descriptor = connect_and_bind_local(cdata);
     }
     else
     {
-        printf("Successfully  connected to server at %s\n", server_address.sun_path);
+        socket_descriptor = connect_and_bind_inet(cdata);
     }
+    
+    if (socket_descriptor == -1)
+    {
+        fprintf(stderr, "Could not connect to server at %s:%hd.\n", inet_ntoa(cdata->server_ip_address), ntohs(cdata->server_port_number));
+        exit(EXIT_FAILURE);
+    }   
 
     char buffer[BUFFER_SIZE];
     ssize_t ret;

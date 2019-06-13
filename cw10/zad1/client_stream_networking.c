@@ -22,39 +22,43 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
 
     // Send RESULT command
     snprintf(buffer, BUFFER_SIZE, "%s", RESULT);
-    writen(server_sockfd, buffer, BUFFER_SIZE);
+    write(server_sockfd, buffer, BUFFER_SIZE);
 
     // Send task id
     snprintf(buffer, BUFFER_SIZE, "%d", task_id);
-    writen(server_sockfd, buffer, BUFFER_SIZE);
+    write(server_sockfd, buffer, BUFFER_SIZE);
 
     // Send string output
     if (filepath)
     {
         snprintf(buffer, BUFFER_SIZE, "File: %s\n", filepath);
-        writen(server_sockfd, buffer, BUFFER_SIZE);
+        write(server_sockfd, buffer, BUFFER_SIZE);
     }
 
     snprintf(buffer, BUFFER_SIZE, "Total word count: %ld\n", words_counted->total_words);
-    writen(server_sockfd, buffer, BUFFER_SIZE);
+    write(server_sockfd, buffer, BUFFER_SIZE);
 
     snprintf(buffer, BUFFER_SIZE, "Word:           Count:\n");
-    writen(server_sockfd, buffer, BUFFER_SIZE);
+    write(server_sockfd, buffer, BUFFER_SIZE);
 
     for (int i = 0; i < words_counted->distinct_words_len; ++i)
     {
         // '-' says "align to left", '*' says "pad with spaces to the right"
         // and 16 tells how wide the first field should be (it will be padded accordingly)
         snprintf(buffer, BUFFER_SIZE, "%-*s  %d\n", 25, words_counted->distinct_words[i], words_counted->distinct_words_count[i]);
-        writen(server_sockfd, buffer, BUFFER_SIZE);
+        while (write(server_sockfd, buffer, BUFFER_SIZE) == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
+        {}
+        
 
         fflush(stdout);
         fsync(server_sockfd);
     }
 
-    // writen END message
+    // Write END message
     snprintf(buffer, BUFFER_SIZE, "%s", END);
-    writen(server_sockfd, buffer, BUFFER_SIZE);
+    // write(server_sockfd, buffer, BUFFER_SIZE);
+    while (write(server_sockfd, buffer, BUFFER_SIZE) == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
+    {}
 
     fflush(stdout);
     fsync(server_sockfd);
@@ -196,7 +200,7 @@ int connect_and_bind_inet(struct connection_data *cdata)
     server_address.sin_addr.s_addr = cdata->server_ip_address.s_addr;
     server_address.sin_port = cdata->server_port_number;
 
-    if (connect(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_un)) == -1 && errno != EINPROGRESS)
+    if (connect(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_in)) == -1 && errno != EINPROGRESS)
     {
         perror("connect");
         return -1;
@@ -215,10 +219,10 @@ void send_name(int socket_descriptor, const char *client_name)
     ssize_t ret;
 
     snprintf(buffer, BUFFER_SIZE, "%s", client_name);
-    ret = writen(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
+    ret = write(socket_descriptor, (const void *)buffer, BUFFER_SIZE);
     if (ret == -1)
     {
-        perror("writen");
+        perror("write");
     }
 }
 

@@ -18,6 +18,11 @@ void sigint_handler(int num)
     close_client = 1;
 }
 
+int get_max_client_name_length(void)
+{
+    return BUFFER_SIZE;
+}
+
 void parse_ip_address(struct connection_data* cdata, const char* server_address)
 {
     // Parse the IP address

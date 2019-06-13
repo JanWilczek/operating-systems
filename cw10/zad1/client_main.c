@@ -85,6 +85,12 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
+    if (strlen(client_name) + 1 > get_max_client_name_length())
+    {
+        fprintf(stderr, "Client's name too long. Can be up to %d characters long.\n", get_max_client_name_length());
+        exit(EXIT_FAILURE);
+    }
+
     run_client(client_name, is_local, server_address);
 
     return EXIT_SUCCESS;

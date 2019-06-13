@@ -137,7 +137,6 @@ void handle_result(struct server_data *server, int client_sockfd)
     while ((ret = read(client_sockfd, buffer, BUFFER_SIZE)) > 0)
     {
         char* is_end = strstr(buffer, END);
-        // if (strncmp(buffer, END, BUFFER_SIZE) == 0)
         if (is_end != NULL)
         {
             is_end[0] = '\0';   // print only characters up to is_end[0]
@@ -287,25 +286,6 @@ void handle_event(struct server_data *server, struct epoll_event *event)
     else if (event->events & EPOLLIN)
     {
         handle_response(server, event->data.fd);
-        // printf("Client %s says:\n", get_client_name(server, event->data.fd));
-
-        // int ret;
-        // char buffer[BUFFER_SIZE];
-        // while ((ret = recv(event->data.fd, buffer, BUFFER_SIZE, MSG_DONTWAIT)) != 0)
-        // {
-        //     if (ret == -1)
-        //     {
-        //         if (errno != EAGAIN && errno != EWOULDBLOCK)
-        //         {
-        //             perror("read");
-        //             exit(EXIT_FAILURE);
-        //         }
-        //         break;
-        //     }
-
-        //     // Print what the client has said.
-        //     fputs(buffer, stdout);
-        // }
     }
     else
     {
@@ -377,7 +357,6 @@ void assign_task(struct server_data *server, char *filename, int target_client_i
     // Send filename to examine
     sprintf(buffer, "%s", filename);
     write(server->clients[target_client_id]->sockfd, filename, strlen(filename) + 1);
-    // write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
 }
 
 void dispatch_work(struct server_data *server)

@@ -20,5 +20,7 @@ int main(int argc, char *argv[])
     // Print results
     wc_print(filepath, &words_counted);
 
+    wc_free(&words_counted);
+
     return 0;
 }

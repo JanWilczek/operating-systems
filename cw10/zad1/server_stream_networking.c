@@ -139,10 +139,16 @@ void handle_result(struct server_data* server, int client_sockfd)
     {
         if (strncmp(buffer, END, BUFFER_SIZE) == 0)
         {
+            printf("Read %s. Breaking input.\n", buffer);
             break;
         }
 
         printf("%s", buffer);
+    }
+
+    if (ret == -1)
+    {
+        perror("read");
     }
 
     --server->clients[get_client_id(server, client_sockfd)]->nb_pending_tasks;
@@ -167,6 +173,7 @@ int start_up(const char *socket_path)
     // Create local socket
     int socket_descriptor;
     if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
+    // if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
     {
         perror("socket");
         exit(EXIT_FAILURE);

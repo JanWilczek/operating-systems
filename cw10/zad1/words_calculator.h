@@ -16,3 +16,5 @@ struct wc_result {
 int wc_calculate_words(const char* filepath, struct wc_result* words_counted);
 
 void wc_print(const char* filepath, struct wc_result* words_counted);
+
+void wc_free(struct wc_result* words_counted);

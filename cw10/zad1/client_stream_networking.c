@@ -1,5 +1,6 @@
 #include "client_stream_networking.h"
 #include "words_calculator.h"
+#include "utils.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,7 +19,7 @@ void sigint_handler(int num)
     close_client = 1;
 }
 
-void send_result(int server_sockfd, int task_id, const char* filepath, struct wc_result* words_counted)
+void send_result(int server_sockfd, int task_id, const char *filepath, struct wc_result *words_counted)
 {
     char buffer[BUFFER_SIZE];
 
@@ -56,6 +57,39 @@ void send_result(int server_sockfd, int task_id, const char* filepath, struct wc
     write(server_sockfd, buffer, BUFFER_SIZE);
 }
 
+void handle_compute(int socket_descriptor)
+{
+    int ret;
+    char buffer[BUFFER_SIZE];
+
+    // Read task id
+    read(socket_descriptor, buffer, BUFFER_SIZE);
+    int task_id = atoi(buffer);
+
+    // Read the name of the file to count words in
+    const int MAX_FILENAME_LENGTH = 1024;
+    char *filename = malloc(MAX_FILENAME_LENGTH * sizeof(char));
+    char *filename_helper = filename;
+
+    while ((ret = read(socket_descriptor, buffer, BUFFER_SIZE)) > 0)
+    {
+        strncpy(filename_helper, buffer, ret);
+        filename_helper += ret;
+    }
+
+    if (!is_file(filename))
+    {
+        fprintf(stderr, "No file under given path %s.\n", filename);
+        return;
+    }
+
+    struct wc_result words_counted;
+    wc_calculate_words(filename, &words_counted);
+    // wc_print(filename, &words_counted);
+    send_result(socket_descriptor, task_id, filename, &words_counted);
+    wc_free(&words_counted);
+}
+
 void client_main_loop(int socket_descriptor)
 {
     char buffer[BUFFER_SIZE];
@@ -81,25 +115,7 @@ void client_main_loop(int socket_descriptor)
             }
             else if (strncmp(buffer, COMPUTE, BUFFER_SIZE) == 0)
             {
-                // Read task id
-                read(socket_descriptor, buffer, BUFFER_SIZE);
-                int task_id = atoi(buffer);
-
-                // Read the name of the file to count words in
-                const int MAX_FILENAME_LENGTH = 1024;
-                char* filename = malloc(MAX_FILENAME_LENGTH * sizeof(char));
-                char* filename_helper = filename;
-
-                while ((ret = read(socket_descriptor, buffer, BUFFER_SIZE)) > 0)
-                {
-                    strncpy(filename_helper, buffer, ret);
-                    filename_helper += ret;
-                }
-
-                struct wc_result words_counted;
-                wc_calculate_words(filename, &words_counted);
-                // wc_print(filename, &words_counted);
-                send_result(socket_descriptor, task_id, filename, &words_counted);
+                handle_compute(socket_descriptor);
             }
         }
         else

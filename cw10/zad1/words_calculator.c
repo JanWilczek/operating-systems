@@ -114,3 +114,12 @@ int wc_calculate_words(const char *filepath, struct wc_result *words_counted)
 
     return 0;
 }
+
+void wc_free(struct wc_result *words_counted)
+{
+    for (int i = 0; i < MAX_DISTINCT_WORDS; ++i)
+    {
+        free(words_counted->distinct_words[i]);
+    }
+    free(words_counted->distinct_words_count);
+}

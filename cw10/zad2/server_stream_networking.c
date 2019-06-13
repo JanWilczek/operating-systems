@@ -120,27 +120,30 @@ void handle_result(struct server_data *server, int sockfd, struct sockaddr *addr
 
     // Receive and print the result
     int ret;
-    while ((ret = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, addr, &addr_len)) > 0 || (errno == EAGAIN || errno == EWOULDBLOCK))
+    struct sockaddr addr2;
+    memcpy(&addr2, addr, addr_len);
+    socklen_t addr2_len = addr_len;
+    while ((ret = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, &addr2, &addr2_len)) > 0 || (errno == EAGAIN || errno == EWOULDBLOCK))
     {
         if (ret == -1)
         {
             continue;
         }
 
-        // char *is_end = strstr(buffer, END);
-        // if (is_end != NULL)
-        // {
-        // is_end[0] = '\0'; // print only characters up to is_end[0]
-        // printf("%s", buffer);
-        // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
-        // printf("End of result from client %s.\n", get_client_name(server, client_sockfd));
-        // break;
-        // }
+        char *is_end = strstr(buffer, END);
+        if (is_end != NULL)
+        {
+            is_end[0] = '\0'; // print only characters up to is_end[0]
+            printf("%s", buffer);
+            // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
+            printf("End of result from client %s.\n", get_client_name(server, addr, addr_len));
+            break;
+        }
 
         printf("%s", buffer);
 
-        // fflush(stdout);
-        // fsync(sockfd);
+        fflush(stdout);
+        fsync(sockfd);
     }
 
     if (ret == -1)
@@ -204,7 +207,7 @@ int start_up(const char *socket_path)
         perror("bind");
         exit(EXIT_FAILURE);
     }
-    
+
     return socket_descriptor;
 }
 
@@ -235,7 +238,7 @@ int start_up_inet(int port_number)
     return socket_descriptor;
 }
 
-void epoll_subscribe(struct server_data* server, int sockfd)
+void epoll_subscribe(struct server_data *server, int sockfd)
 {
     struct epoll_event event_options;
     event_options.events = EPOLLIN | EPOLLET;

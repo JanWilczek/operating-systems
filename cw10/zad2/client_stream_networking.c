@@ -54,9 +54,9 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
     }
 
     // Write END message
-    // snprintf(buffer, BUFFER_SIZE, "%s", END);
-    // while (write(server_sockfd, buffer, BUFFER_SIZE) == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
-    // {}
+    snprintf(buffer, BUFFER_SIZE, "%s", END);
+    while (write(server_sockfd, buffer, BUFFER_SIZE) == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
+    {}
 
     // fflush(stdout);
     // fsync(server_sockfd);

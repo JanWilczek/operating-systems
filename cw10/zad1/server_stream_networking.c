@@ -83,6 +83,7 @@ void handle_register(struct server_data *server, int client_sockfd)
     strncpy(client->name, name, strlen(name) + 1);
     client->sockfd = client_sockfd;
     client->nb_pending_tasks = 0;
+    client->should_be_removed = 0;
     server->clients[first_free_id] = client;
 
     // Set up client's socket descriptor for monitoring
@@ -136,12 +137,12 @@ void handle_result(struct server_data *server, int client_sockfd)
     int ret;
     while ((ret = read(client_sockfd, buffer, BUFFER_SIZE)) > 0)
     {
-        char* is_end = strstr(buffer, END);
+        char *is_end = strstr(buffer, END);
         if (is_end != NULL)
         {
-            is_end[0] = '\0';   // print only characters up to is_end[0]
+            is_end[0] = '\0'; // print only characters up to is_end[0]
             printf("%s", buffer);
-            printf("Read %s. Breaking input.\n", is_end + 1);   // Should display 248END1248
+            printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
             break;
         }
 
@@ -169,6 +170,10 @@ void handle_response(struct server_data *server, int client_sockfd)
     if (strncmp(buffer, RESULT, BUFFER_SIZE) == 0)
     {
         handle_result(server, client_sockfd);
+    }
+    else if (strncmp(buffer, PINGREPLY, BUFFER_SIZE) == 0)
+    {
+        server->clients[get_client_id(server, client_sockfd)]->pinged = 0;
     }
 }
 /********************************************************/
@@ -281,7 +286,8 @@ void handle_event(struct server_data *server, struct epoll_event *event)
     // Handles EPOLLIN and EPOLLRDHUP
     if (event->events & EPOLLRDHUP)
     {
-        handle_unregister(event->data.fd, server);
+        //handle_unregister(event->data.fd, server);
+        server->clients[get_client_id(server, event->data.fd)]->should_be_removed = 1;
     }
     else if (event->events & EPOLLIN)
     {
@@ -418,7 +424,53 @@ void server_main_loop(struct server_data *server)
         {
             dispatch_work(server);
         }
+    }
+}
 
-        // Ping clients every 100 iterations
+void pinging_loop(struct server_data *server)
+{
+    char buffer[BUFFER_SIZE];
+    int ret;
+    while (!shut_server)
+    {
+        for (int i = 0; i < MAX_CONNECTIONS; ++i)
+        {
+            // Ping only clients without pending tasks
+            if (server->clients[i] != NULL && server->clients[i]->nb_pending_tasks == 0)
+            {
+                // Check if client responded to ping
+                if (!server->clients[i]->should_be_removed)
+                {
+                    if (!server->clients[i]->pinged)
+                    {
+                        server->clients[i]->pinged = 1;
+                        sprintf(buffer, "%s", PING);
+                        while ((ret = write(server->clients[i]->sockfd, buffer, BUFFER_SIZE)) <= 0)
+                        {
+                            if (ret == -1)
+                            {
+                                if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EDQUOT)
+                                {
+                                    perror("write");
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        printf("Client %s did not respond. He shall be removed.\n", server->clients[i]->name);
+                        server->clients[i]->should_be_removed = 1;
+                    }
+                }
+
+                if (server->clients[i]->should_be_removed)
+                {
+                    handle_unregister(server->clients[i]->sockfd, server);
+                }
+            }
+        }
+
+        sleep(2);
     }
 }

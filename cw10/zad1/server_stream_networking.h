@@ -23,6 +23,9 @@ struct client_data {
     char* name;
     int sockfd;
     int nb_pending_tasks;
+
+    int should_be_removed;
+    int pinged;
 };
 
 struct server_data{
@@ -37,4 +40,5 @@ struct server_data{
 int server_start_up(const char *socket_path, struct server_data* server, int port_number);
 void server_main_loop(struct server_data* server);
 void server_shut_down(struct server_data* server, const char* socket_path);
+void pinging_loop(struct server_data *server);
 

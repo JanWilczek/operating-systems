@@ -150,6 +150,16 @@ void client_main_loop(int socket_descriptor)
 
                 handle_compute(socket_descriptor);
             }
+            else if (strncmp(buffer, PING, BUFFER_SIZE) == 0)
+            {
+                printf("Pinged.\n");
+
+                snprintf(buffer, BUFFER_SIZE, "%s", PINGREPLY);
+                if (write(socket_descriptor, buffer, BUFFER_SIZE) == -1)
+                {
+                    perror("write");
+                }
+            }
         }
         else
         {

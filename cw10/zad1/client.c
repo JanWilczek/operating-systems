@@ -30,7 +30,6 @@ void parse_ip_address(struct connection_data* cdata, const char* server_address)
     strcpy(temp, server_address);
     char *ip_address = strtok(temp, ":");
     if (ip_address == NULL)
-    // if (sscanf(server_address, "%s:%hd", ip_address, &port_number) != 2)
     {
         fprintf(stderr, "Invalid server address format. Should be 127.127.127.127:80 (sample values).\n");
         exit(EXIT_FAILURE);
@@ -82,12 +81,4 @@ void run_client(const char *client_name, int is_local, const char *server_addres
     }
 
     client_open_connection(client_name, is_local, &cdata);
-
-    // Send to server your name - if it is invalid stop
-
-    // Listen for work to do - should be active all the time and accept incoming tasks
-
-    // Perform computation - total number of words and numbers of particular words
-
-    // Handle ^C - unregister from server
 }

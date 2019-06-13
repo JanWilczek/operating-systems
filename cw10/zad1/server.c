@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <errno.h>
 
-
 /* The server has following duties:
     1. Listen on web and local socket.
     2. Handle client registration.
@@ -37,10 +36,19 @@ void *server_monitoring_thread(void *arg)
     return 0;
 }
 
+void *pinging_thread(void *arg)
+{
+    struct server_data *server = (struct server_data *)arg;
+
+    pinging_loop(server);
+
+    return 0;
+}
+
 void command_loop(struct server_data *server)
 {
     const int BUF_SIZE = 1024;
-    char* buffer = malloc(BUF_SIZE * sizeof(char));
+    char *buffer = malloc(BUF_SIZE * sizeof(char));
 
     while (!shut_server)
     {
@@ -98,10 +106,18 @@ void run_server(int port_number, char *socket_path)
     // Open socket for connection
     server_start_up(socket_path, &server, port_number);
 
-    // Start client-monitoring thread
-    pthread_t monitoring_thread_id;
+    // Start work-dispatching and response-receiving thread
+    pthread_t work_dispatcher_thread_id;
     int ret;
-    if ((ret = pthread_create(&monitoring_thread_id, NULL, server_monitoring_thread, (void *)&server)) != 0)
+    if ((ret = pthread_create(&work_dispatcher_thread_id, NULL, server_monitoring_thread, (void *)&server)) != 0)
+    {
+        fprintf(stderr, "pthread_create: %s\n", strerror(ret));
+        exit(EXIT_FAILURE);
+    }
+
+    // Start pinging thread
+    pthread_t pinging_thread_id;
+    if ((ret = pthread_create(&pinging_thread_id, NULL, pinging_thread, (void *)&server)) != 0)
     {
         fprintf(stderr, "pthread_create: %s\n", strerror(ret));
         exit(EXIT_FAILURE);
@@ -111,7 +127,12 @@ void run_server(int port_number, char *socket_path)
     command_loop(&server);
 
     // Wait for threads to join
-    if ((ret = pthread_join(monitoring_thread_id, NULL)) != 0)
+    if ((ret = pthread_join(work_dispatcher_thread_id, NULL)) != 0)
+    {
+        fprintf(stderr, "pthread_join: %s\n", strerror(ret));
+    }
+
+    if ((ret = pthread_join(pinging_thread_id, NULL)) != 0)
     {
         fprintf(stderr, "pthread_join: %s\n", strerror(ret));
     }

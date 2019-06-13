@@ -47,6 +47,12 @@ const char *get_client_name(const struct server_data *server, struct sockaddr *a
 /*********** COMMAND HANDLING FUNCTIONS *****************/
 void handle_register(struct server_data *server, int sockfd, const char *client_name, struct sockaddr *addr, socklen_t addr_len)
 {
+    if (addr == NULL)
+    {
+        fprintf(stderr, "Cannot register a client with a NULL address.\n");
+        return;
+    }
+
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
         if (server->clients[i] != NULL && strcmp(server->clients[i]->name, client_name) == 0)

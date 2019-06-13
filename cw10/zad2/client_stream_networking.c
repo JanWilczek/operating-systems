@@ -15,6 +15,7 @@
 #include <arpa/inet.h>
 
 extern int close_client;
+void send_name(int socket_descriptor, const char *client_name);
 
 void send_result(int server_sockfd, int task_id, const char *filepath, struct wc_result *words_counted)
 {
@@ -109,7 +110,7 @@ void handle_compute(int socket_descriptor, int task_id)
     wc_free(&words_counted);
 }
 
-void client_main_loop(int socket_descriptor)
+void client_main_loop(int socket_descriptor, const char* client_name)
 {
     char buffer[BUFFER_SIZE];
     ssize_t ret;
@@ -154,6 +155,10 @@ void client_main_loop(int socket_descriptor)
                 {
                     perror("write");
                 }
+            }
+            else if (strncmp(buffer, NOTREGISTERED, BUFFER_SIZE) == 0)
+            {
+                send_name(socket_descriptor, client_name);
             }
         }
         else
@@ -261,7 +266,6 @@ int connect_to_server(int is_local, struct connection_data *cdata)
 
 void disconnect_from_server(int socket_descriptor)
 {
-    // TODO: Add unregistration
     if (send(socket_descriptor, UNREGISTER, strlen(UNREGISTER) + 1, 0) < 0)
     {
         perror("send");
@@ -281,7 +285,7 @@ void client_open_connection(const char *client_name, int is_local, struct connec
     send_name(socket_descriptor, client_name);
 
     // CLIENT MAIN LOOP
-    client_main_loop(socket_descriptor);
+    client_main_loop(socket_descriptor, client_name);
 
     disconnect_from_server(socket_descriptor);
 }

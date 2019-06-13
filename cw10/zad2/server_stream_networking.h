@@ -11,6 +11,7 @@
 /* Server-client message types */
 #define REGISTER "REGISTER"
 #define REGISTERDENIED "REGDEN"
+#define NOTREGISTERED "NOTREGISTER"
 #define UNREGISTER "UNREGISTER"
 #define COMPUTE "COMPUTE"
 #define RESULT "RESULT"

@@ -92,21 +92,11 @@ void handle_register(struct server_data *server, int sockfd, const char *client_
     // }
 }
 
-void handle_unregister(struct server_data *server, int sockfd, struct sockaddr *addr, socklen_t addr_len)
+void handle_unregister(struct server_data *server, int client_id)
 {
-    int i = get_client_id(server, addr, addr_len);
-    if (i >= 0)
-    {
-        // struct epoll_event event;
-        // epoll_ctl(server->epoll_fd, EPOLL_CTL_DEL, server->clients[i]->sockfd, &event); // event must be non-null due to a bug
-        printf("Successfully unregistered client with name %s.\n", server->clients[i]->name);
-        free_client(server->clients[i]);
-        server->clients[i] = NULL;
-    }
-    else
-    {
-        fprintf(stderr, "Cannot unregister not registered client with given address.\n");
-    }
+    printf("Successfully unregistered client with name %s.\n", server->clients[client_id]->name);
+    free_client(server->clients[client_id]);
+    server->clients[client_id] = NULL;
 }
 
 void handle_result(struct server_data *server, int sockfd, struct sockaddr *addr, socklen_t addr_len, int task_id)
@@ -168,21 +158,30 @@ void handle_response(struct server_data *server, int sockfd)
         // A new client connected
         handle_register(server, sockfd, buffer + strlen(REGISTER) /* client name */, &addr, addr_len);
     }
-    else if (strncmp(buffer, UNREGISTER, strlen(UNREGISTER)) == 0)
+    else if (get_client_id(server, &addr, addr_len) != -1)
     {
-        handle_unregister(server, sockfd, &addr, addr_len);
-    }
-    else if (strncmp(buffer, RESULT, strlen(RESULT)) == 0)
-    {
-        handle_result(server, sockfd, &addr, addr_len, atoi(buffer + strlen(RESULT)));
-    }
-    else if (strncmp(buffer, PINGREPLY, BUFFER_SIZE) == 0)
-    {
-        server->clients[get_client_id(server, &addr, addr_len)]->pinged = 0;
+        if (strncmp(buffer, UNREGISTER, strlen(UNREGISTER)) == 0)
+        {
+            // handle_unregister(server, sockfd, &addr, addr_len);
+            server->clients[get_client_id(server, &addr, addr_len)]->should_be_removed = 1;
+        }
+        else if (strncmp(buffer, RESULT, strlen(RESULT)) == 0)
+        {
+            handle_result(server, sockfd, &addr, addr_len, atoi(buffer + strlen(RESULT)));
+        }
+        else if (strncmp(buffer, PINGREPLY, BUFFER_SIZE) == 0)
+        {
+            server->clients[get_client_id(server, &addr, addr_len)]->pinged = 0;
+        }
+        else
+        {
+            printf("%s", buffer);
+        }
     }
     else
     {
-        printf("%s", buffer);
+        // Unregistered client
+        sendto(sockfd, NOTREGISTERED, strlen(NOTREGISTERED) + 1, 0, &addr, addr_len);
     }
 }
 /********************************************************/
@@ -388,42 +387,10 @@ void dispatch_work(struct server_data *server)
     }
 }
 
-void examine_socket(struct server_data *server, int server_sockfd)
-{
-    // Accept incoming connections
-    struct sockaddr addr;
-    socklen_t addr_len;
-    char buffer[BUFFER_SIZE];
-    if (recvfrom(server_sockfd, buffer, BUFFER_SIZE, 0, &addr, &addr_len) > 0)
-    {
-        if (strncmp(buffer, REGISTER, strlen(REGISTER)) == 0)
-        {
-            // A new client connected
-            handle_register(server, server_sockfd, buffer + strlen(REGISTER) /* client name */, &addr, addr_len);
-        }
-        else if (strncmp(buffer, UNREGISTER, strlen(UNREGISTER)) == 0)
-        {
-            handle_unregister(server, server_sockfd, &addr, addr_len);
-        }
-        else if (strncmp(buffer, RESULT, strlen(RESULT)) == 0)
-        {
-            handle_result(server, server_sockfd, &addr, addr_len, atoi(buffer + strlen(RESULT)));
-        }
-        else
-        {
-            printf("%s", buffer);
-        }
-    }
-}
-
 void server_main_loop(struct server_data *server)
 {
     while (!shut_server)
     {
-        // Check local socket
-        // examine_socket(server, server->sockfd);
-        // examine_socket(server, server->inet_sockfd);
-
         // Check for events from server's sockets
         check_events(server);
 
@@ -460,7 +427,8 @@ void pinging_loop(struct server_data *server)
                                 if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EDQUOT)
                                 {
                                     perror("write");
-                                    continue;
+                                    server->clients[i]->should_be_removed = 1;
+                                    break;
                                 }
                             }
                         }
@@ -474,7 +442,7 @@ void pinging_loop(struct server_data *server)
 
                 if (server->clients[i]->should_be_removed)
                 {
-                    handle_unregister(server, server->clients[i]->sockfd, server->clients[i]->addr, server->clients[i]->addr_len);
+                    handle_unregister(server, i);
                 }
             }
         }

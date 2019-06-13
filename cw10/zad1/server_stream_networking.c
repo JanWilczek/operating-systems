@@ -142,7 +142,8 @@ void handle_result(struct server_data *server, int client_sockfd)
         {
             is_end[0] = '\0'; // print only characters up to is_end[0]
             printf("%s", buffer);
-            printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
+            // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
+            printf("End of result from client %s.\n", get_client_name(server, client_sockfd));
             break;
         }
 

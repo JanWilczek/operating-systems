@@ -56,7 +56,6 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
 
     // Write END message
     snprintf(buffer, BUFFER_SIZE, "%s", END);
-    // write(server_sockfd, buffer, BUFFER_SIZE);
     while (write(server_sockfd, buffer, BUFFER_SIZE) == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
     {}
 
@@ -72,12 +71,9 @@ void handle_compute(int socket_descriptor)
     // Read task id
     while (recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL) == -1 && errno == EAGAIN)
     {}
-    // while (recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL) <= 0)
-    // {}
-    // recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL);
 
     int task_id = atoi(buffer);
-    printf("Received: %s\n", buffer);
+    printf("Received task ID: %s\n", buffer);
 
     // Read the name of the file to count words in
     const int MAX_FILENAME_LENGTH = 1024;
@@ -94,10 +90,10 @@ void handle_compute(int socket_descriptor)
                 break;
             }
         }
-        printf("Received: %s\n", buffer);
         strncpy(filename_helper, buffer, ret);
         filename_helper += ret;
     }
+    printf("Received filename: %s\n", filename);
 
     if (!is_file(filename))
     {

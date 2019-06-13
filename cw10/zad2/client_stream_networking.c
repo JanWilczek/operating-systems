@@ -102,9 +102,9 @@ void handle_compute(int socket_descriptor, int task_id)
 
     struct wc_result words_counted;
     wc_calculate_words(filename, &words_counted);
-    wc_print(filename, &words_counted);
+    // wc_print(filename, &words_counted);
     printf("Finished computation, sending result.\n");
-    // send_result(socket_descriptor, task_id, filename, &words_counted);
+    send_result(socket_descriptor, task_id, filename, &words_counted);
     printf("Result sent.\n");
     wc_free(&words_counted);
 }

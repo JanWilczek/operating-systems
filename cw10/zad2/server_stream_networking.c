@@ -109,7 +109,7 @@ void handle_unregister(struct server_data *server, int sockfd, struct sockaddr *
     }
 }
 
-void handle_result(struct server_data *server, int sockfd, struct sockaddr* addr, socklen_t addr_len, int task_id)
+void handle_result(struct server_data *server, int sockfd, struct sockaddr *addr, socklen_t addr_len, int task_id)
 {
     char buffer[BUFFER_SIZE];
 
@@ -120,16 +120,21 @@ void handle_result(struct server_data *server, int sockfd, struct sockaddr* addr
 
     // Receive and print the result
     int ret;
-    while ((ret = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, addr, &addr_len)) > 0)
+    while ((ret = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, addr, &addr_len)) > 0 || (errno == EAGAIN || errno == EWOULDBLOCK))
     {
+        if (ret == -1)
+        {
+            continue;
+        }
+
         // char *is_end = strstr(buffer, END);
         // if (is_end != NULL)
         // {
-            // is_end[0] = '\0'; // print only characters up to is_end[0]
-            // printf("%s", buffer);
-            // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
-            // printf("End of result from client %s.\n", get_client_name(server, client_sockfd));
-            // break;
+        // is_end[0] = '\0'; // print only characters up to is_end[0]
+        // printf("%s", buffer);
+        // printf("Read %s. Breaking input.\n", is_end + 1); // Should display 248END1248
+        // printf("End of result from client %s.\n", get_client_name(server, client_sockfd));
+        // break;
         // }
 
         printf("%s", buffer);
@@ -149,19 +154,32 @@ void handle_result(struct server_data *server, int sockfd, struct sockaddr* addr
 void handle_response(struct server_data *server, int sockfd)
 {
     char buffer[BUFFER_SIZE];
-    
+
     // Determine the type of command
     struct sockaddr addr;
     socklen_t addr_len;
     recvfrom(sockfd, buffer, BUFFER_SIZE, 0, &addr, &addr_len);
 
-    if (strncmp(buffer, RESULT, BUFFER_SIZE) == 0)
+    if (strncmp(buffer, REGISTER, strlen(REGISTER)) == 0)
+    {
+        // A new client connected
+        handle_register(server, sockfd, buffer + strlen(REGISTER) /* client name */, &addr, addr_len);
+    }
+    else if (strncmp(buffer, UNREGISTER, strlen(UNREGISTER)) == 0)
+    {
+        handle_unregister(server, sockfd, &addr, addr_len);
+    }
+    else if (strncmp(buffer, RESULT, strlen(RESULT)) == 0)
     {
         handle_result(server, sockfd, &addr, addr_len, atoi(buffer + strlen(RESULT)));
     }
     else if (strncmp(buffer, PINGREPLY, BUFFER_SIZE) == 0)
     {
         server->clients[get_client_id(server, &addr, addr_len)]->pinged = 0;
+    }
+    else
+    {
+        printf("%s", buffer);
     }
 }
 /********************************************************/
@@ -186,7 +204,7 @@ int start_up(const char *socket_path)
         perror("bind");
         exit(EXIT_FAILURE);
     }
-
+    
     return socket_descriptor;
 }
 
@@ -217,6 +235,17 @@ int start_up_inet(int port_number)
     return socket_descriptor;
 }
 
+void epoll_subscribe(struct server_data* server, int sockfd)
+{
+    struct epoll_event event_options;
+    event_options.events = EPOLLIN | EPOLLET;
+    event_options.data.fd = sockfd;
+    if (epoll_ctl(server->epoll_fd, EPOLL_CTL_ADD, sockfd, &event_options) == -1)
+    {
+        perror("epoll");
+    }
+}
+
 int server_start_up(const char *socket_path, struct server_data *server, int port_number)
 {
     // Necessary for early process termination
@@ -225,6 +254,9 @@ int server_start_up(const char *socket_path, struct server_data *server, int por
     server->sockfd = start_up(socket_path);
     server->inet_sockfd = start_up_inet(port_number);
     server->epoll_fd = epoll_create1(0);
+
+    epoll_subscribe(server, server->sockfd);
+    epoll_subscribe(server, server->inet_sockfd);
 
     return 0;
 }
@@ -309,8 +341,8 @@ int pick_target_client(struct server_data *server)
 void assign_task(struct server_data *server, char *filename, int target_client_id)
 {
     int task_id = server->tasks_assigned++;
-    struct client_data* client = server->clients[target_client_id];
-    ++client->nb_pending_tasks;
+    struct client_data *client = server->clients[target_client_id];
+    ++(client->nb_pending_tasks);
 
     char buffer[BUFFER_SIZE];
 
@@ -370,6 +402,14 @@ void examine_socket(struct server_data *server, int server_sockfd)
         {
             handle_unregister(server, server_sockfd, &addr, addr_len);
         }
+        else if (strncmp(buffer, RESULT, strlen(RESULT)) == 0)
+        {
+            handle_result(server, server_sockfd, &addr, addr_len, atoi(buffer + strlen(RESULT)));
+        }
+        else
+        {
+            printf("%s", buffer);
+        }
     }
 }
 
@@ -378,10 +418,10 @@ void server_main_loop(struct server_data *server)
     while (!shut_server)
     {
         // Check local socket
-        examine_socket(server, server->sockfd);
-        examine_socket(server, server->inet_sockfd);
+        // examine_socket(server, server->sockfd);
+        // examine_socket(server, server->inet_sockfd);
 
-        // Check for events from clients
+        // Check for events from server's sockets
         check_events(server);
 
         // Check for work to dispatch

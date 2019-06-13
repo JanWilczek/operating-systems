@@ -63,24 +63,24 @@ void send_result(int server_sockfd, int task_id, const char *filepath, struct wc
     fsync(server_sockfd);
 }
 
-void handle_compute(int socket_descriptor)
+void handle_compute(int socket_descriptor, int task_id)
 {
     int ret;
     char buffer[BUFFER_SIZE];
 
     // Read task id
-    while (recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL) == -1 && errno == EAGAIN)
-    {}
+    // while (recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL) == -1 && errno == EAGAIN)
+    // {}
 
-    int task_id = atoi(buffer);
-    printf("Received task ID: %s\n", buffer);
+    // int task_id = atoi(buffer);
+    printf("Received task ID: %d\n", task_id);
 
     // Read the name of the file to count words in
     const int MAX_FILENAME_LENGTH = 1024;
     char *filename = malloc(MAX_FILENAME_LENGTH * sizeof(char));
     char *filename_helper = filename;
 
-    while(recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_PEEK) <= 0);
+    // while(recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_PEEK) <= 0);
     while ((ret = recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL)) > 0)
     {
         if (ret == -1)
@@ -103,10 +103,10 @@ void handle_compute(int socket_descriptor)
 
     struct wc_result words_counted;
     wc_calculate_words(filename, &words_counted);
-    // wc_print(filename, &words_counted);
+    wc_print(filename, &words_counted);
     printf("Finished computation, sending result.\n");
-    send_result(socket_descriptor, task_id, filename, &words_counted);
-    printf("Result sent.\n");
+    // send_result(socket_descriptor, task_id, filename, &words_counted);
+    printf("Result sent (WIP).\n");
     wc_free(&words_counted);
 }
 
@@ -134,7 +134,7 @@ void client_main_loop(int socket_descriptor)
                 fprintf(stderr, "Name already taken. Exiting.\n");
                 break;
             }
-            else if (strncmp(buffer, COMPUTE, BUFFER_SIZE) == 0)
+            else if (strncmp(buffer, COMPUTE, strlen(COMPUTE)) == 0)
             {
                 printf("Received: %s\n", buffer);
 
@@ -144,7 +144,7 @@ void client_main_loop(int socket_descriptor)
                 fflush(stdout);
                 fsync(socket_descriptor);
 
-                handle_compute(socket_descriptor);
+                handle_compute(socket_descriptor, atoi(buffer + strlen(COMPUTE)));
             }
             else if (strncmp(buffer, PING, BUFFER_SIZE) == 0)
             {

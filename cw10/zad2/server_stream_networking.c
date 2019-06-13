@@ -313,23 +313,24 @@ int pick_target_client(struct server_data *server)
 void assign_task(struct server_data *server, char *filename, int target_client_id)
 {
     int task_id = server->tasks_assigned++;
-    ++server->clients[target_client_id]->nb_pending_tasks;
+    struct client_data* client = server->clients[target_client_id];
+    ++client->nb_pending_tasks;
 
     char buffer[BUFFER_SIZE];
 
-    // Send COMPUTE command
-    sprintf(buffer, "%s", COMPUTE);
-    write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
+    // Send COMPUTE command and task id
+    snprintf(buffer, BUFFER_SIZE, "%s%d", COMPUTE, task_id);
+    sendto(client->sockfd, buffer, BUFFER_SIZE, 0, client->addr, client->addr_len);
     memset(buffer, 0, BUFFER_SIZE);
 
     // Send task id
-    sprintf(buffer, "%d", task_id);
-    write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
-    memset(buffer, 0, BUFFER_SIZE);
+    // sprintf(buffer, "%d", task_id);
+    // write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
+    // memset(buffer, 0, BUFFER_SIZE);
 
     // Send filename to examine
     sprintf(buffer, "%s", filename);
-    write(server->clients[target_client_id]->sockfd, filename, strlen(filename) + 1);
+    sendto(client->sockfd, filename, strlen(filename) + 1, 0, client->addr, client->addr_len);
 }
 
 void dispatch_work(struct server_data *server)

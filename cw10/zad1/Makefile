@@ -47,4 +47,4 @@ utils.o: utils.h utils.c
 	gcc $(CFLAGS) $(TEMP_FLAGS) -c utils.c
 
 clean:
-	rm *.o server client words_calculator_test
+	rm *.o server client words_calculator_test core

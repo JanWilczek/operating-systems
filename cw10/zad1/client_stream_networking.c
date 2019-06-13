@@ -1,6 +1,7 @@
 #include "client_stream_networking.h"
 #include "words_calculator.h"
 #include "utils.h"
+#include "thread_safe_queue.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -11,16 +12,9 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <signal.h>
 #include <arpa/inet.h>
 
-
-int close_client;
-
-void sigint_handler(int num)
-{
-    close_client = 1;
-}
+extern int close_client;
 
 void send_result(int server_sockfd, int task_id, const char *filepath, struct wc_result *words_counted)
 {
@@ -72,17 +66,31 @@ void handle_compute(int socket_descriptor)
     char buffer[BUFFER_SIZE];
 
     // Read task id
-    recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL);
+    while (recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL) == -1 && errno == EAGAIN)
+    {}
+    // while (recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL) <= 0)
+    // {}
+    // recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL);
+
     int task_id = atoi(buffer);
-    // printf("Received: %s\n", buffer);
+    printf("Received: %s\n", buffer);
 
     // Read the name of the file to count words in
     const int MAX_FILENAME_LENGTH = 1024;
     char *filename = malloc(MAX_FILENAME_LENGTH * sizeof(char));
     char *filename_helper = filename;
 
+    while(recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_PEEK) <= 0);
     while ((ret = recv(socket_descriptor, buffer, BUFFER_SIZE, MSG_WAITALL)) > 0)
     {
+        if (ret == -1)
+        {
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                break;
+            }
+        }
+        printf("Received: %s\n", buffer);
         strncpy(filename_helper, buffer, ret);
         filename_helper += ret;
     }
@@ -96,7 +104,9 @@ void handle_compute(int socket_descriptor)
     struct wc_result words_counted;
     wc_calculate_words(filename, &words_counted);
     // wc_print(filename, &words_counted);
+    printf("Finished computation, sending result.\n");
     send_result(socket_descriptor, task_id, filename, &words_counted);
+    printf("Result sent.\n");
     wc_free(&words_counted);
 }
 
@@ -144,11 +154,11 @@ void client_main_loop(int socket_descriptor)
     }
 }
 
-int connect_and_bind_local(struct connection_data* cdata)
+int connect_and_bind_local(struct connection_data *cdata)
 {
     // Create local socket
     int socket_descriptor;
-    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM/* | SOCK_NONBLOCK */, 0)) == -1)
+    if ((socket_descriptor = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
     {
         perror("socket");
         return -1;
@@ -171,9 +181,9 @@ int connect_and_bind_local(struct connection_data* cdata)
     return socket_descriptor;
 }
 
-int connect_and_bind_inet(struct connection_data* cdata)
+int connect_and_bind_inet(struct connection_data *cdata)
 {
-     // Create local socket
+    // Create local socket
     int socket_descriptor;
     if ((socket_descriptor = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
     {
@@ -199,34 +209,8 @@ int connect_and_bind_inet(struct connection_data* cdata)
     return socket_descriptor;
 }
 
-void client_open_connection(const char *client_name, int is_local, struct connection_data *cdata)
+void send_name(int socket_descriptor, const char *client_name)
 {
-    close_client = 0;
-
-    // Set up SIGINT handler
-    struct sigaction sa;
-    sa.sa_handler = sigint_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGINT, &sa, NULL);
-    
-    // Connect to server
-    int socket_descriptor;
-    if (is_local)
-    {
-        socket_descriptor = connect_and_bind_local(cdata);
-    }
-    else
-    {
-        socket_descriptor = connect_and_bind_inet(cdata);
-    }
-    
-    if (socket_descriptor == -1)
-    {
-        fprintf(stderr, "Could not connect to server at %s:%hd.\n", inet_ntoa(cdata->server_ip_address), ntohs(cdata->server_port_number));
-        exit(EXIT_FAILURE);
-    }   
-
     char buffer[BUFFER_SIZE];
     ssize_t ret;
 
@@ -236,10 +220,31 @@ void client_open_connection(const char *client_name, int is_local, struct connec
     {
         perror("write");
     }
+}
 
-    // CLIENT MAIN LOOP
-    client_main_loop(socket_descriptor);
+int connect_to_server(int is_local, struct connection_data *cdata)
+{
+    int socket_descriptor;
+    if (is_local)
+    {
+        socket_descriptor = connect_and_bind_local(cdata);
+    }
+    else
+    {
+        socket_descriptor = connect_and_bind_inet(cdata);
+    }
 
+    if (socket_descriptor == -1)
+    {
+        fprintf(stderr, "Could not connect to server at %s:%hd.\n", inet_ntoa(cdata->server_ip_address), ntohs(cdata->server_port_number));
+        exit(EXIT_FAILURE);
+    }
+
+    return socket_descriptor;
+}
+
+void disconnect_from_server(int socket_descriptor)
+{
     if (shutdown(socket_descriptor, SHUT_RDWR) == -1)
     {
         perror("shutdown");
@@ -251,4 +256,16 @@ void client_open_connection(const char *client_name, int is_local, struct connec
         perror("close");
         exit(EXIT_FAILURE);
     }
+}
+
+void client_open_connection(const char *client_name, int is_local, struct connection_data *cdata)
+{
+    int socket_descriptor = connect_to_server(is_local, cdata);
+
+    send_name(socket_descriptor, client_name);
+
+    // CLIENT MAIN LOOP
+    client_main_loop(socket_descriptor);
+
+    disconnect_from_server(socket_descriptor);
 }

@@ -363,13 +363,17 @@ void assign_task(struct server_data *server, char *filename, int target_client_i
     // Send COMPUTE command
     sprintf(buffer, "%s", COMPUTE);
     write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
+    memset(buffer, 0, BUFFER_SIZE);
 
     // Send task id
     sprintf(buffer, "%d", task_id);
     write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
+    memset(buffer, 0, BUFFER_SIZE);
 
     // Send filename to examine
+    sprintf(buffer, "%s", filename);
     write(server->clients[target_client_id]->sockfd, filename, strlen(filename) + 1);
+    // write(server->clients[target_client_id]->sockfd, buffer, BUFFER_SIZE);
 }
 
 void dispatch_work(struct server_data *server)

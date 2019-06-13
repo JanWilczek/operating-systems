@@ -65,6 +65,7 @@ void handle_compute(int socket_descriptor)
     // Read task id
     read(socket_descriptor, buffer, BUFFER_SIZE);
     int task_id = atoi(buffer);
+    // printf("Received: %s\n", buffer);
 
     // Read the name of the file to count words in
     const int MAX_FILENAME_LENGTH = 1024;
@@ -115,6 +116,14 @@ void client_main_loop(int socket_descriptor)
             }
             else if (strncmp(buffer, COMPUTE, BUFFER_SIZE) == 0)
             {
+                // printf("Received: %s\n", buffer);
+
+                // This is why everyone should love C. These guys below make sure that the filename later on
+                // is received in the right order. I mean it's obvious right? What's even more hilarious
+                // I have discovered it by including printf statements here and there. Worked like a charm!
+                fflush(stdout);
+                fsync(socket_descriptor);
+
                 handle_compute(socket_descriptor);
             }
         }

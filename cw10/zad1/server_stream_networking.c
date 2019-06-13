@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
+#include <netinet/in.h>
 
 /*********** GLOBAL VARIABLES *****************/
 extern int shut_server;
@@ -20,7 +21,7 @@ void free_client(struct client_data *client)
     free(client);
 }
 
-int get_client_id(const struct server_data* server, int client_sockfd)
+int get_client_id(const struct server_data *server, int client_sockfd)
 {
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
@@ -57,7 +58,6 @@ void handle_register(struct server_data *server, int client_sockfd)
         return;
     }
     strncpy(name, buffer, BUFFER_SIZE);
-
 
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
@@ -124,7 +124,7 @@ void handle_unregister(int client_sockfd, struct server_data *server)
     fprintf(stderr, "Cannot unregister not registered client with socket descriptor %d.\n", client_sockfd);
 }
 
-void handle_result(struct server_data* server, int client_sockfd)
+void handle_result(struct server_data *server, int client_sockfd)
 {
     char buffer[BUFFER_SIZE];
 
@@ -154,7 +154,7 @@ void handle_result(struct server_data* server, int client_sockfd)
     --server->clients[get_client_id(server, client_sockfd)]->nb_pending_tasks;
 }
 
-void handle_response(struct server_data* server, int client_sockfd)
+void handle_response(struct server_data *server, int client_sockfd)
 {
     char buffer[BUFFER_SIZE];
 
@@ -191,7 +191,7 @@ int start_up(const char *socket_path)
     }
 
     // Listen for client connections
-    if (listen(socket_descriptor, MAX_CONNECTIONS) == -1)
+    if (listen(socket_descriptor, MAX_CONNECTIONS / 2) == -1)
     {
         perror("listen");
         exit(EXIT_FAILURE);
@@ -200,12 +200,46 @@ int start_up(const char *socket_path)
     return socket_descriptor;
 }
 
-int server_start_up(const char *socket_path, struct server_data *server)
+int start_up_inet(int port_number)
+{
+    // Create local socket
+    int socket_descriptor;
+    if ((socket_descriptor = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
+    {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // Bind socket to its name
+    struct sockaddr_in server_address;
+    server_address.sin_family = AF_INET;
+    struct in_addr address;
+    address.s_addr = INADDR_ANY;
+    server_address.sin_addr = address;
+
+    if (bind(socket_descriptor, (struct sockaddr *)&server_address, sizeof(struct sockaddr_in)) == -1)
+    {
+        perror("bind");
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for client connections
+    if (listen(socket_descriptor, MAX_CONNECTIONS / 2) == -1)
+    {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+
+    return socket_descriptor;
+}
+
+int server_start_up(const char *socket_path, struct server_data *server, int port_number)
 {
     // Necessary for early process termination
     unlink(socket_path);
 
     server->sockfd = start_up(socket_path);
+    server->inet_sockfd = start_up_inet(port_number);
     server->epoll_fd = epoll_create1(0);
 
     return 0;
@@ -230,11 +264,11 @@ void server_shut_down(struct server_data *server, const char *socket_path)
 {
     // Shut down server connection
     shut_down(server->sockfd);
+    shut_down(server->inet_sockfd);
 
     // Remove created socket
     unlink(socket_path);
 }
-
 
 void handle_event(struct server_data *server, struct epoll_event *event)
 {
@@ -272,7 +306,7 @@ void handle_event(struct server_data *server, struct epoll_event *event)
     }
 }
 
-void check_sockets(struct server_data *server)
+void check_events(struct server_data *server)
 {
     const int MAX_EVENTS = 20;
     struct epoll_event events_registered[MAX_EVENTS];
@@ -294,11 +328,11 @@ void check_sockets(struct server_data *server)
 }
 
 /** Returns -1 when no clients are connected. */
-int pick_target_client(struct server_data* server)
+int pick_target_client(struct server_data *server)
 {
     int target_client_id = -1;
     int min_pending_tasks = TASK_QUEUE_SIZE;
-    
+
     for (int i = 0; i < MAX_CONNECTIONS; ++i)
     {
         if (server->clients[i] != NULL && server->clients[i]->nb_pending_tasks < min_pending_tasks)
@@ -316,7 +350,7 @@ int pick_target_client(struct server_data* server)
     return target_client_id;
 }
 
-void assign_task(struct server_data* server, char* filename, int target_client_id)
+void assign_task(struct server_data *server, char *filename, int target_client_id)
 {
     int task_id = server->tasks_assigned++;
     ++server->clients[target_client_id]->nb_pending_tasks;
@@ -335,11 +369,11 @@ void assign_task(struct server_data* server, char* filename, int target_client_i
     write(server->clients[target_client_id]->sockfd, filename, strlen(filename) + 1);
 }
 
-void dispatch_work(struct server_data* server)
+void dispatch_work(struct server_data *server)
 {
     while (queue_size(&server->queue) > 0)
     {
-        char* filename;
+        char *filename;
         try_get_from_queue(&server->queue, &filename);
         if (filename != NULL)
         {
@@ -359,27 +393,35 @@ void dispatch_work(struct server_data* server)
     }
 }
 
+void examine_socket(struct server_data *server, int server_sockfd)
+{
+    // Accept incoming connections
+    int client_sockfd;
+    if ((client_sockfd = accept(server_sockfd, NULL, NULL)) == -1)
+    {
+        if (errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+            perror("accept");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        // A new client connected
+        handle_register(server, client_sockfd);
+    }
+}
+
 void server_main_loop(struct server_data *server)
 {
     while (!shut_server)
     {
-        // Accept incoming connections
-        int client_sockfd;
-        if ((client_sockfd = accept(server->sockfd, NULL, NULL)) == -1)
-        {
-            if (errno != EAGAIN && errno != EWOULDBLOCK)
-            {
-                perror("accept");
-                exit(EXIT_FAILURE);
-            }
+        // Check local socket
+        examine_socket(server, server->sockfd);
+        examine_socket(server, server->inet_sockfd);
 
-            check_sockets(server);
-        }
-        else
-        {
-            // A new client connected
-            handle_register(server, client_sockfd);
-        }
+        // Check for events from clients
+        check_events(server);
 
         // Check for work to dispatch
         if (queue_size(&server->queue) > 0)

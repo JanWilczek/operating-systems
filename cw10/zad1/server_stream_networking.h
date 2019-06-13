@@ -32,12 +32,13 @@ struct client_data {
 struct server_data{
     int epoll_fd;
     int sockfd;
+    int inet_sockfd;
     struct client_data** clients;
     thread_safe_queue_t queue;
     int tasks_assigned;
 };
 
-int server_start_up(const char *socket_path, struct server_data* server);
+int server_start_up(const char *socket_path, struct server_data* server, int port_number);
 void server_main_loop(struct server_data* server);
 void server_shut_down(struct server_data* server, const char* socket_path);
 

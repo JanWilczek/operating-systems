@@ -96,7 +96,7 @@ void run_server(int port_number, char *socket_path)
     server.tasks_assigned = 0;
 
     // Open socket for connection
-    server_start_up(socket_path, &server);
+    server_start_up(socket_path, &server, port_number);
 
     // Start client-monitoring thread
     pthread_t monitoring_thread_id;

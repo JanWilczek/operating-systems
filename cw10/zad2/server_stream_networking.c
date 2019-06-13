@@ -151,7 +151,6 @@ void handle_response(struct server_data *server, int sockfd)
     {
         if (strncmp(buffer, UNREGISTER, strlen(UNREGISTER)) == 0)
         {
-            // handle_unregister(server, sockfd, &addr, addr_len);
             server->clients[get_client_id(server, &addr, addr_len)]->should_be_removed = 1;
         }
         else if (strncmp(buffer, RESULT, strlen(RESULT)) == 0)
